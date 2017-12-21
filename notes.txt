@@ -1,0 +1,4 @@
+rename ThreadRef to Thread
+
+Enable for a thread to be reused by having a queue of work per thread.
+This may mean removing the ctor args for ThreadRef
