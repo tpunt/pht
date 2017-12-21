@@ -70,6 +70,16 @@ void thread_destroy(thread_t *thread)
     pthread_mutex_destroy(&thread->lock);
 }
 
+message_t *create_new_message(entry_t *entry)
+{
+    message_t *message = malloc(sizeof(message_t));
+
+    message->message = entry;
+    message->next = NULL;
+
+    return message;
+}
+
 void *worker_function(thread_t *thread)
 {
     // thread_offset = thread->offset;
@@ -182,6 +192,49 @@ finish:
     pthread_exit(NULL);
 }
 
+void message_queue_push(message_queue_t *message_queue, message_t *message)
+{
+    pthread_mutex_lock(&message_queue->lock);
+
+    if (!message_queue->messages) {
+        message_queue->messages = message;
+    } else {
+        message_queue->last_message->next = message;
+    }
+
+    message_queue->last_message = message;
+
+    pthread_mutex_unlock(&message_queue->lock);
+}
+
+zend_bool message_queue_pop(message_queue_t *message_queue, zval *zmessage)
+{
+    message_t *emessage = NULL;
+
+    pthread_mutex_lock(&message_queue->lock);
+
+    if (message_queue->messages) {
+        emessage = message_queue->messages;
+        message_queue->messages = message_queue->messages->next;
+
+        if (!message_queue->messages) {
+            message_queue->last_message = NULL;
+        }
+    }
+
+    pthread_mutex_unlock(&message_queue->lock);
+
+    if (!emessage) {
+        return 0;
+    }
+
+    pht_convert_entry_to_zval(zmessage, emessage->message);
+    free(emessage->message);
+    free(emessage);
+
+    return 1;
+}
+
 static zend_object *threadref_ctor(zend_class_entry *entry)
 {
     thread_t *thread = ecalloc(1, sizeof(thread_t) + zend_object_properties_size(entry));
@@ -209,6 +262,10 @@ static zend_object *message_queue_ctor(zend_class_entry *entry)
     object_properties_init(&message_queue->obj, entry);
 
     message_queue->obj.handlers = &message_queue_handlers;
+
+    message_queue->messages = NULL;
+    message_queue->status = ACTIVE;
+    pthread_mutex_init(&message_queue->lock, NULL);
 
     return &message_queue->obj;
 }
@@ -272,6 +329,79 @@ PHP_METHOD(ThreadRef, join)
     pthread_join(thread->thread, NULL);
 }
 
+ZEND_BEGIN_ARG_INFO_EX(MessageQueue_push_arginfo, 0, 0, 1)
+    ZEND_ARG_INFO(0, message)
+ZEND_END_ARG_INFO()
+
+PHP_METHOD(MessageQueue, push)
+{
+    message_queue_t *message_queue = (message_queue_t *)((char *)Z_OBJ(EX(This)) - Z_OBJ(EX(This))->handlers->offset);
+    zval *message;
+
+    ZEND_PARSE_PARAMETERS_START(1, 1)
+        Z_PARAM_ZVAL(message)
+    ZEND_PARSE_PARAMETERS_END();
+
+    message_queue_push(message_queue, create_new_message(create_new_entry(message)));
+}
+
+ZEND_BEGIN_ARG_INFO_EX(MessageQueue_pop_arginfo, 0, 0, 1)
+    ZEND_ARG_INFO(0, message)
+ZEND_END_ARG_INFO()
+
+PHP_METHOD(MessageQueue, pop)
+{
+    message_queue_t *message_queue = (message_queue_t *)((char *)Z_OBJ(EX(This)) - Z_OBJ(EX(This))->handlers->offset);
+    zval *zmessage;
+
+    ZEND_PARSE_PARAMETERS_START(1, 1)
+        Z_PARAM_ZVAL(zmessage)
+    ZEND_PARSE_PARAMETERS_END();
+
+    RETURN_BOOL(message_queue_pop(message_queue, zmessage));
+}
+
+ZEND_BEGIN_ARG_INFO_EX(MessageQueue_finish_arginfo, 0, 0, 0)
+ZEND_END_ARG_INFO()
+
+PHP_METHOD(MessageQueue, finish)
+{
+    message_queue_t *message_queue = (message_queue_t *)((char *)Z_OBJ(EX(This)) - Z_OBJ(EX(This))->handlers->offset);
+
+    if (zend_parse_parameters_none() != SUCCESS) {
+        return;
+    }
+
+    // @todo I don't think a mutex lock needs to be held for this?
+    // I'm going to hold it anyway for now, and performance check things later
+    pthread_mutex_lock(&message_queue->lock);
+    message_queue->status = FINISHED;
+    pthread_mutex_unlock(&message_queue->lock);
+}
+
+ZEND_BEGIN_ARG_INFO_EX(MessageQueue_is_finished_arginfo, 0, 0, 0)
+ZEND_END_ARG_INFO()
+
+PHP_METHOD(MessageQueue, isFinished)
+{
+    message_queue_t *message_queue = (message_queue_t *)((char *)Z_OBJ(EX(This)) - Z_OBJ(EX(This))->handlers->offset);
+
+    if (zend_parse_parameters_none() != SUCCESS) {
+        return;
+    }
+
+    // @todo I don't think a mutex lock needs to be held for this?
+    // I'm going to hold it anyway for now, and performance check things later
+    // Also, this could probably be just a simple property instead of a method
+    pthread_mutex_lock(&message_queue->lock);
+    zend_bool finished = message_queue->status == FINISHED;
+    pthread_mutex_unlock(&message_queue->lock);
+
+    RETURN_BOOL(finished);
+}
+
+
+
 zend_function_entry Threaded_methods[] = {
     PHP_FE_END
 };
@@ -282,6 +412,16 @@ zend_function_entry ThreadRef_methods[] = {
     PHP_ME(ThreadRef, join, ThreadRef_join_arginfo, ZEND_ACC_PUBLIC)
     PHP_FE_END
 };
+
+zend_function_entry MessageQueue_methods[] = {
+    PHP_ME(MessageQueue, push, MessageQueue_push_arginfo, ZEND_ACC_PUBLIC)
+    PHP_ME(MessageQueue, pop, MessageQueue_pop_arginfo, ZEND_ACC_PUBLIC)
+    PHP_ME(MessageQueue, finish, MessageQueue_finish_arginfo, ZEND_ACC_PUBLIC)
+    PHP_ME(MessageQueue, isFinished, MessageQueue_is_finished_arginfo, ZEND_ACC_PUBLIC)
+    PHP_FE_END
+};
+
+
 
 PHP_MINIT_FUNCTION(pht)
 {
@@ -304,7 +444,7 @@ PHP_MINIT_FUNCTION(pht)
     MessageQueue_ce = zend_register_internal_class(&ce);
     MessageQueue_ce->create_object = message_queue_ctor;
 
-    threadref_handlers.offset = XtOffsetOf(message_queue_t, obj);
+    message_queue_handlers.offset = XtOffsetOf(message_queue_t, obj);
 
     threads.size = 16;
     threads.used = 0;

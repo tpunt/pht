@@ -2,14 +2,15 @@
 
 class T implements Threaded
 {
-    public function __construct(int $i)
+    public function __construct(MessageQueue $mq)
     {
-        var_dump($i);
+        $this->mq = $mq;
     }
 
     public function run()
     {
-        var_dump(1);
+        $this->mq->push(1);
+        $this->mq->finish();
     }
 }
 
@@ -18,13 +19,23 @@ use a Thread class instead? (new Thread(...))
 Define constants Thread::ALIVE, Thread::FINISHED, Thread::JOINED
 */
 
-$tr = new ThreadRef(T::class, 2);
+$mq = new MessageQueue();
+
+$tr = new ThreadRef(T::class, $mq);
 
 $tr->start();
 
-// do some work
-
 $results = [];
+
+while (!$mq->finished()) {
+    if ($mq->pop($message)) {
+        //
+    }
+}
+
+$tr->join();
+
+var_dump($results);
 
 /*
 Threaded::alive could return ALIVE, FINISHED, or JOINED.
@@ -40,11 +51,7 @@ The spawned thread would also need to have a queue of jobs to do.
 //     }
 // }
 
-$tr->join();
-
 // var_dump($tr->fetch(/* flags? */));
-
-var_dump($results);
 
 // message passing approach
 // enforce send and receive methods in Threaded interface. Must maintain parent

@@ -92,26 +92,23 @@ ZEND_EXTERN_MODULE_GLOBALS(pht)
 ZEND_TSRMLS_CACHE_EXTERN()
 #endif
 
-typedef enum _thread_status_t {
+typedef enum _status_t {
     UNDER_CONSTRUCTION,
     ACTIVE,
+    FINISHED,
     DESTROYED
-} thread_status_t;
-
-typedef enum _message_queue_status_t {
-    ACTIVE,
-    FINISHED
-} message_queue_status_t;
+} status_t;
 
 typedef struct _message_t {
     entry_t *message;
-    struct message_t *next;
+    struct _message_t *next;
 } message_t;
 
 typedef struct _message_queue_t {
     pthread_mutex_t lock;
-    message_queue_status_t status;
+    status_t status;
     message_t *messages;
+    message_t *last_message; // prevents traversing all messages when enqueueing
     zend_object obj;
 } message_queue_t;
 
@@ -121,7 +118,7 @@ typedef struct _thread_t {
     zend_ulong id; // local storage ID used to fetch local storage data
     // task_t *tasks;
     pthread_mutex_t lock;
-    thread_status_t status;
+    status_t status;
     pht_string_t class_name;
     int class_ctor_argc;
     entry_t *class_ctor_args;
