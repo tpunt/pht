@@ -15,7 +15,7 @@ class SomeClass implements Threaded
 $tr = new ThreadRef(SomeClass::class);
 ```
 
-By taking this approach, `Threaded` objects themselves no longer require their properties to be serialised. This is because we no longer need to pass around `Threaded` objects anymore (instead, their references can be safely passed around), and so `Threaded` objects no longer need to be able to operate in multiple execution contexts.
+By taking this approach, `Threaded` objects themselves no longer require their properties to be serialised. This is because we no longer need to pass around `Threaded` objects anymore, and so `Threaded` objects no longer need to be able to operate in multiple execution contexts.
 
 This introduces a new problem: how can inter-thread communication be performed? To solve this problem, I decided to make threads "process-like" in terms of their communication between each another. The inter-process communication (IPC) technique I have decided to implement so far is message queues. Message queues are mutex-controlled queues that can be passed around between threads, enabling for a producer-consumer communication style.
 
@@ -53,6 +53,8 @@ while (!$mq->isFinished() || $mq->hasMessages()) {
 
 $tr->join();
 ```
+
+So now, only message queues need to be safely passed around.
 
 The `MessageQueue` class looks as follows:
 ```php
@@ -98,8 +100,8 @@ class MessageQueue
 }
 ```
 
-In future, I may implement other techniques, too (such as message passing). This will likely require `Threaded` objects to extend the `Threaded` class, rather than simply implementing it as an interface.
-
 With the above in mind, the serialisation points are:
  - The arguments to the `ThreadRef` constructor
  - The values pushed to the message queue
+
+In future, I may implement other IPC techniques, too (such as message passing). The need for additional communication techniques will hopefully become clearer in future.
