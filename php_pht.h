@@ -74,6 +74,7 @@ extern zend_module_entry pht_module_entry;
 
 #include "pht_general.h"
 #include "pht_entry.h"
+#include "pht_queue.h"
 
 ZEND_BEGIN_MODULE_GLOBALS(pht)
 	HashTable interned_strings; // used for op_array file names
@@ -96,7 +97,7 @@ typedef enum _status_t {
     UNDER_CONSTRUCTION,
     ACTIVE,
     FINISHED,
-    DESTROYED
+    DESTROYED // JOINED?
 } status_t;
 
 typedef struct _message_t {
@@ -104,19 +105,22 @@ typedef struct _message_t {
     struct _message_t *next;
 } message_t;
 
+typedef struct _task_t {
+    pht_string_t class_name;
+    int class_ctor_argc;
+    entry_t *class_ctor_args;
+} task_t;
+
 typedef struct _message_queue_internal_t {
     pthread_mutex_t lock;
     status_t status;
+    // queue_t messages;
     message_t *messages;
     message_t *last_message; // prevents traversing all messages when enqueueing
 } message_queue_internal_t;
 
 typedef struct _message_queue_t {
     message_queue_internal_t *mqi;
-    // pthread_mutex_t lock;
-    // status_t status;
-    // message_t *messages;
-    // message_t *last_message; // prevents traversing all messages when enqueueing
     zend_object obj;
 } message_queue_t;
 
@@ -124,14 +128,14 @@ typedef struct _thread_t {
     pthread_t thread; // must be first member
     int tid; // use thread as global in tls instead?
     zend_ulong id; // local storage ID used to fetch local storage data
-    // task_t *tasks;
     pthread_mutex_t lock;
     status_t status;
-    pht_string_t class_name;
-    int class_ctor_argc;
-    entry_t *class_ctor_args;
+    queue_t tasks;
+    // pht_string_t class_name;
+    // int class_ctor_argc;
+    // entry_t *class_ctor_args;
     void*** ls; // pointer to local storage in TSRM
-    zend_object *threaded_object;
+    // zend_object *threaded_object;
     zend_object obj;
 } thread_t;
 

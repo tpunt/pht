@@ -23,11 +23,12 @@
 static void copy_executor_globals(void);
 static zend_function *copy_function(zend_function *old_func, zend_class_entry *new_ce);
 static zend_function *copy_internal_function(zend_function *old_func);
-static zend_arg_info *copy_function_arg_info(zend_arg_info *old_arg_info, uint32_t num_args);
+static zend_arg_info *copy_function_arg_info(zend_arg_info *old_arg_info, uint32_t fn_flags, uint32_t num_args);
 static void copy_znode_op(znode_op *new_znode, znode_op *old_znode);
 static zend_op *copy_zend_op(zend_op_array *new_op_array, zend_op_array *old_op_array);
 static zend_live_range *copy_zend_live_range(zend_live_range *old_live_range, uint32_t count);
 static zend_try_catch_element *copy_zend_try_catch_element(zend_try_catch_element *old_try_catch, uint32_t count);
+static HashTable *copy_static_variables(HashTable *old_static_variables);
 static void copy_zend_op_array(zend_op_array *new_op_array, zend_op_array *old_op_array, zend_class_entry *new_ce);
 static void copy_ini_directives(HashTable *new_ini_directives, HashTable *old_ini_directives);
 static void copy_included_files(HashTable *new_included_files, HashTable old_included_files);
@@ -167,14 +168,25 @@ static zend_function *copy_function(zend_function *old_func, zend_class_entry *n
     return new_func;
 }
 
-static zend_arg_info *copy_function_arg_info(zend_arg_info *old_arg_info, uint32_t num_args)
+static zend_arg_info *copy_function_arg_info(zend_arg_info *old_arg_info, uint32_t fn_flags, uint32_t num_args)
 {
+    if (fn_flags & ZEND_ACC_HAS_RETURN_TYPE) {
+        --old_arg_info;
+        ++num_args;
+    }
+
+    if (fn_flags & ZEND_ACC_VARIADIC) {
+        ++num_args;
+    }
+
     zend_arg_info *new_arg_info = emalloc(sizeof(zend_arg_info) * num_args);
 
     memcpy(new_arg_info, old_arg_info, sizeof(zend_arg_info) * num_args);
 
     for (int i = 0; i < num_args; ++i) {
-        new_arg_info[i].name = zend_string_dup(old_arg_info[i].name, 0);
+        if (old_arg_info[i].name) {
+            new_arg_info[i].name = zend_string_dup(old_arg_info[i].name, 0);
+        }
 
         if (ZEND_TYPE_IS_CLASS(old_arg_info[i].type)) {
             zend_string *type_name = zend_string_dup(ZEND_TYPE_NAME(old_arg_info[i].type), 0);
@@ -183,22 +195,7 @@ static zend_arg_info *copy_function_arg_info(zend_arg_info *old_arg_info, uint32
             new_arg_info[i].type = ZEND_TYPE_ENCODE_CLASS(type_name, allow_null);
         }
     }
-/*
-    for (int i = 0; i < num_args; ++i) {
-        new_arg_info[i].name = zend_string_dup(old_arg_info[i].name, 0);
 
-        if (old_arg_info[i].class_name) {
-            new_arg_info[i].class_name = zend_string_dup(old_arg_info[i].class_name, 0);
-        } else {
-            new_arg_info[i].class_name = NULL;
-        }
-
-        new_arg_info[i].type_hint = old_arg_info[i].type_hint;
-        new_arg_info[i].pass_by_reference = old_arg_info[i].pass_by_reference;
-        new_arg_info[i].allow_null = old_arg_info[i].allow_null;
-        new_arg_info[i].is_variadic = old_arg_info[i].is_variadic;
-    }
-*/
     return new_arg_info;
 }
 
@@ -243,6 +240,59 @@ static zend_try_catch_element *copy_zend_try_catch_element(zend_try_catch_elemen
     return new_try_catch;
 }
 
+static HashTable *copy_static_variables(HashTable *old_static_variables)
+{
+    if (!old_static_variables) {
+        return NULL;
+    }
+
+    HashTable *new_static_variables;
+    zend_string *key;
+    zval *value;
+
+    ALLOC_HASHTABLE(new_static_variables);
+    zend_hash_init(new_static_variables, zend_hash_num_elements(old_static_variables), NULL, ZVAL_PTR_DTOR, 0);
+
+    ZEND_HASH_FOREACH_STR_KEY_VAL(old_static_variables, key, value) {
+        zend_string *new_key = zend_string_dup(key, 0);
+
+        while (Z_ISREF_P(value)) {
+            value = Z_REFVAL_P(value);
+        }
+
+        if (!Z_REFCOUNTED_P(value)) {
+            zend_hash_add(new_static_variables, new_key, value);
+        } else {
+            zval copy;
+
+            switch (Z_TYPE_P(value)) {
+                case IS_STRING:
+                    ZVAL_NEW_STR(&copy, zend_string_dup(Z_STR_P(value), 0));
+                    zend_hash_add(new_static_variables, new_key, &copy);
+                    break;
+                case IS_ARRAY:
+                    ZVAL_ARR(&copy, pht_zend_array_dup(Z_ARR_P(value)));
+                    zend_hash_add(new_static_variables, new_key, &copy);
+                    break;
+                case IS_CONSTANT: // constant names are interned, so nothing to do
+					break;
+                case IS_CONSTANT_AST: // @todo PHP 7.2 specific
+                    ZVAL_NEW_AST(&copy, zend_ast_copy(Z_AST_P(value)->ast)); // @todo use pht_zend_ast_copy()?
+                    zend_hash_add(new_static_variables, new_key, &copy);
+                    break;
+                default:
+                    printf("%d\n", Z_TYPE_P(value));
+                    ZEND_ASSERT(0);
+            }
+
+            // zend_hash_add(new_static_variables, new_key, &copy);
+            zend_string_release(new_key);
+        }
+    } ZEND_HASH_FOREACH_END();
+
+    return new_static_variables;
+}
+
 static void copy_zend_op_array(zend_op_array *new_op_array, zend_op_array *old_op_array, zend_class_entry *new_ce)
 {
     new_op_array->type = old_op_array->type;
@@ -253,7 +303,7 @@ static void copy_zend_op_array(zend_op_array *new_op_array, zend_op_array *old_o
     new_op_array->prototype = NULL;
     new_op_array->num_args = old_op_array->num_args;
     new_op_array->required_num_args = old_op_array->required_num_args;
-    new_op_array->arg_info = copy_function_arg_info(old_op_array->arg_info, old_op_array->num_args);
+    new_op_array->arg_info = copy_function_arg_info(old_op_array->arg_info, old_op_array->fn_flags, old_op_array->num_args);
     new_op_array->refcount = emalloc(sizeof(uint32_t));
     *new_op_array->refcount = 1;
     new_op_array->last = old_op_array->last;
@@ -266,14 +316,7 @@ static void copy_zend_op_array(zend_op_array *new_op_array, zend_op_array *old_o
     new_op_array->last_try_catch = old_op_array->last_try_catch;
     new_op_array->live_range = copy_zend_live_range(old_op_array->live_range, old_op_array->last_live_range);
     new_op_array->try_catch_array = copy_zend_try_catch_element(old_op_array->try_catch_array, old_op_array->last_try_catch);
-
-    if (old_op_array->static_variables) {
-        ALLOC_HASHTABLE(new_op_array->static_variables);
-        zend_hash_init(new_op_array->static_variables, 4, NULL, ZVAL_PTR_DTOR, 0);
-        zend_hash_copy(new_op_array->static_variables, old_op_array->static_variables, NULL);
-    } else {
-        new_op_array->static_variables = NULL;
-    }
+    new_op_array->static_variables = copy_static_variables(old_op_array->static_variables);
 
     if (!(new_op_array->filename = zend_hash_find_ptr(&PHT_ZG(interned_strings), old_op_array->filename))) {
         zend_string *filename = zend_string_dup(old_op_array->filename, 0);

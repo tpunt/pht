@@ -30,11 +30,11 @@
 #include "php_pht.h"
 #include "pht_copy.h"
 
-zend_object_handlers threadref_handlers;
+zend_object_handlers thread_handlers;
 zend_object_handlers message_queue_handlers;
 
 zend_class_entry *Threaded_ce;
-zend_class_entry *ThreadRef_ce;
+zend_class_entry *Thread_ce;
 zend_class_entry *MessageQueue_ce;
 
 thread_t main_thread;
@@ -62,6 +62,7 @@ void thread_init(thread_t *thread, int tid)
 {
     thread->tid = tid;
     thread->status = UNDER_CONSTRUCTION;
+    queue_init(&thread->tasks);
     pthread_mutex_init(&thread->lock, NULL);
 }
 
@@ -113,91 +114,98 @@ void *worker_function(thread_t *thread)
     php_request_startup();
     copy_execution_context();
 
-    zend_string *ce_name = zend_string_init(thread->class_name.val, thread->class_name.len, 0);
-    zend_class_entry *ce = zend_fetch_class_by_name(ce_name, NULL, ZEND_FETCH_CLASS_DEFAULT | ZEND_FETCH_CLASS_EXCEPTION);
-    zend_function *constructor, *run;
-    zval zobj;
-
-    if (object_init_ex(&zobj, ce) != SUCCESS) {
-        // @todo this will throw an exception in the new thread, rather than at
-        // the call site. This doesn't even have an execution context - how
-        // should it behave?
-        zend_throw_exception_ex(zend_ce_exception, 0, "Failed to threaded object from class '%s'\n", ZSTR_VAL(ce_name));
-        goto finish;
-    }
-
-    // inc Z_OBJ(zobj) refcount ?
-
-    thread->threaded_object = Z_OBJ(zobj);
-
-    constructor = Z_OBJ_HT(zobj)->get_constructor(Z_OBJ(zobj));
-
-    if (constructor) {
-        int result;
-        zval retval, zargs[thread->class_ctor_argc];
-        zend_fcall_info fci;
-
-        for (int i = 0; i < thread->class_ctor_argc; ++i) {
-            pht_convert_entry_to_zval(zargs + i, thread->class_ctor_args + i);
-        }
-
-        fci.size = sizeof(fci);
-        fci.object = Z_OBJ(zobj);
-        fci.retval = &retval;
-        fci.param_count = thread->class_ctor_argc;
-        fci.params = zargs;
-        fci.no_separation = 1;
-        // @todo doesn't have to be __construct (could be class name instead)
-        ZVAL_STRINGL(&fci.function_name, "__construct", sizeof("__construct") - 1);
-
-        result = zend_call_function(&fci, NULL);
-
-        if (result == FAILURE) {
-            if (!EG(exception)) {
-                // @todo same exception throwing problem and constructor name as above?
-                zend_error_noreturn(E_CORE_ERROR, "Couldn't execute method %s%s%s", ZSTR_VAL(ce_name), "::", "__construct");
-                goto finish; // leaks function_name
-            }
-        }
-
-        zval_dtor(&fci.function_name);
-        // dtor on retval?
-    }
-
     pthread_mutex_lock(&thread->lock);
     if (thread->status == UNDER_CONSTRUCTION) {
         thread->status = ACTIVE;
     }
     pthread_mutex_unlock(&thread->lock);
 
-    int result;
-    zval retval;
-    zend_fcall_info fci;
+    while (thread->status != DESTROYED) {
+        task_t *task = dequeue(&thread->tasks);
 
-    fci.size = sizeof(fci);
-    fci.object = Z_OBJ(zobj);
-    fci.retval = &retval;
-    fci.param_count = 0;
-    fci.params = NULL;
-    fci.no_separation = 1;
-    ZVAL_STRINGL(&fci.function_name, "run", sizeof("run") - 1);
+        if (!task) {
+            continue;
+        }
 
-    result = zend_call_function(&fci, NULL);
+        zend_string *ce_name = zend_string_init(task->class_name.val, task->class_name.len, 0);
+        zend_class_entry *ce = zend_fetch_class_by_name(ce_name, NULL, ZEND_FETCH_CLASS_DEFAULT | ZEND_FETCH_CLASS_EXCEPTION);
+        zend_function *constructor, *run;
+        zval zobj;
 
-    if (result == FAILURE) {
-        if (!EG(exception)) {
-            // same as problem above?
-            zend_error_noreturn(E_CORE_ERROR, "Couldn't execute method %s%s%s", ZSTR_VAL(ce_name), "::", "run");
+        if (object_init_ex(&zobj, ce) != SUCCESS) {
+            // @todo this will throw an exception in the new thread, rather than at
+            // the call site. This doesn't even have an execution context - how
+            // should it behave?
+            zend_throw_exception_ex(zend_ce_exception, 0, "Failed to create threaded object from class '%s'\n", ZSTR_VAL(ce_name));
             goto finish;
         }
-    }
 
-    zval_dtor(&fci.function_name);
+        // inc Z_OBJ(zobj) refcount ?
+
+        // thread->threaded_object = Z_OBJ(zobj);
+
+        constructor = Z_OBJ_HT(zobj)->get_constructor(Z_OBJ(zobj));
+
+        if (constructor) {
+            int result;
+            zval retval, zargs[task->class_ctor_argc];
+            zend_fcall_info fci;
+
+            for (int i = 0; i < task->class_ctor_argc; ++i) {
+                pht_convert_entry_to_zval(zargs + i, task->class_ctor_args + i);
+            }
+
+            fci.size = sizeof(fci);
+            fci.object = Z_OBJ(zobj);
+            fci.retval = &retval;
+            fci.param_count = task->class_ctor_argc;
+            fci.params = zargs;
+            fci.no_separation = 1;
+            // @todo doesn't have to be __construct (could be class name instead)
+            ZVAL_STRINGL(&fci.function_name, "__construct", sizeof("__construct") - 1);
+
+            result = zend_call_function(&fci, NULL);
+
+            if (result == FAILURE) {
+                if (!EG(exception)) {
+                    // @todo same exception throwing problem and constructor name as above?
+                    zend_error_noreturn(E_CORE_ERROR, "Couldn't execute method %s%s%s", ZSTR_VAL(ce_name), "::", "__construct");
+                    zval_dtor(&fci.function_name);
+                    goto finish;
+                }
+            }
+
+            zval_dtor(&fci.function_name);
+            // dtor on retval?
+        }
+
+        int result;
+        zval retval;
+        zend_fcall_info fci;
+
+        fci.size = sizeof(fci);
+        fci.object = Z_OBJ(zobj);
+        fci.retval = &retval;
+        fci.param_count = 0;
+        fci.params = NULL;
+        fci.no_separation = 1;
+        ZVAL_STRINGL(&fci.function_name, "run", sizeof("run") - 1);
+
+        result = zend_call_function(&fci, NULL);
+
+        if (result == FAILURE) {
+            if (!EG(exception)) {
+                // same as problem above?
+                zend_error_noreturn(E_CORE_ERROR, "Couldn't execute method %s%s%s", ZSTR_VAL(ce_name), "::", "run");
+            }
+        }
+
+        zval_dtor(&fci.function_name);
 
 finish:
-    zend_string_free(ce_name);
-
-    // @todo pause here until ThreadRef::join is invoked
+        zend_string_free(ce_name);
+        free(task);
+    }
 
     PG(report_memleaks) = 0;
 
@@ -256,7 +264,7 @@ zend_bool message_queue_pop(message_queue_internal_t *mqi, zval *zmessage)
     return 1;
 }
 
-static zend_object *threadref_ctor(zend_class_entry *entry)
+static zend_object *thread_ctor(zend_class_entry *entry)
 {
     thread_t *thread = ecalloc(1, sizeof(thread_t) + zend_object_properties_size(entry));
     int tid = aquire_thread_id();
@@ -266,7 +274,7 @@ static zend_object *threadref_ctor(zend_class_entry *entry)
     zend_object_std_init(&thread->obj, entry);
     object_properties_init(&thread->obj, entry);
 
-    thread->obj.handlers = &threadref_handlers;
+    thread->obj.handlers = &thread_handlers;
 
     pthread_mutex_lock(&threads.lock);
     threads.thread_table[tid] = thread;
@@ -297,11 +305,11 @@ static zend_object *message_queue_ctor(zend_class_entry *entry)
 ZEND_BEGIN_ARG_INFO_EX(Threaded_run_arginfo, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
-ZEND_BEGIN_ARG_INFO_EX(ThreadRef___construct_arginfo, 0, 0, 1)
+ZEND_BEGIN_ARG_INFO_EX(Thread_add_task_arginfo, 0, 0, 1)
     ZEND_ARG_INFO(0, class_name)
 ZEND_END_ARG_INFO()
 
-PHP_METHOD(ThreadRef, __construct)
+PHP_METHOD(Thread, addTask)
 {
     zend_class_entry *ce = Threaded_ce;
     zval *args;
@@ -317,25 +325,28 @@ PHP_METHOD(ThreadRef, __construct)
     // discard the ce here and use only the ce name now
 
     thread_t *thread = (thread_t *)((char *)Z_OBJ(EX(This)) - Z_OBJ(EX(This))->handlers->offset);
+    task_t *task = malloc(sizeof(task_t));
 
-    string_update(&thread->class_name, ZSTR_VAL(ce->name), ZSTR_LEN(ce->name));
-    thread->class_ctor_argc = argc;
+    string_update(&task->class_name, ZSTR_VAL(ce->name), ZSTR_LEN(ce->name));
+    task->class_ctor_argc = argc;
 
     if (argc) {
-        thread->class_ctor_args = malloc(sizeof(entry_t) * argc);
+        task->class_ctor_args = malloc(sizeof(entry_t) * argc);
 
         for (int i = 0; i < argc; ++i) {
-            pht_convert_zval_to_entry(thread->class_ctor_args + i, args + i);
+            pht_convert_zval_to_entry(task->class_ctor_args + i, args + i);
         }
     } else {
-        thread->class_ctor_args = NULL;
+        task->class_ctor_args = NULL;
     }
+
+    enqueue(&thread->tasks, task);
 }
 
-ZEND_BEGIN_ARG_INFO_EX(ThreadRef_start_arginfo, 0, 0, 0)
+ZEND_BEGIN_ARG_INFO_EX(Thread_start_arginfo, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
-PHP_METHOD(ThreadRef, start)
+PHP_METHOD(Thread, start)
 {
     thread_t *thread = (thread_t *)((char *)Z_OBJ(EX(This)) - Z_OBJ(EX(This))->handlers->offset);
 
@@ -345,14 +356,26 @@ PHP_METHOD(ThreadRef, start)
     pthread_create((pthread_t *)thread, NULL, (void *)worker_function, thread);
 }
 
-ZEND_BEGIN_ARG_INFO_EX(ThreadRef_join_arginfo, 0, 0, 0)
+ZEND_BEGIN_ARG_INFO_EX(Thread_join_arginfo, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
-PHP_METHOD(ThreadRef, join)
+PHP_METHOD(Thread, join)
 {
     thread_t *thread = (thread_t *)((char *)Z_OBJ(EX(This)) - Z_OBJ(EX(This))->handlers->offset);
 
+    thread->status = DESTROYED;
+
     pthread_join(thread->thread, NULL);
+}
+
+ZEND_BEGIN_ARG_INFO_EX(Thread_task_count_arginfo, 0, 0, 0)
+ZEND_END_ARG_INFO()
+
+PHP_METHOD(Thread, taskCount)
+{
+    thread_t *thread = (thread_t *)((char *)Z_OBJ(EX(This)) - Z_OBJ(EX(This))->handlers->offset);
+
+    RETVAL_LONG(thread->tasks.size);
 }
 
 ZEND_BEGIN_ARG_INFO_EX(MessageQueue_push_arginfo, 0, 0, 1)
@@ -449,10 +472,11 @@ zend_function_entry Threaded_methods[] = {
     PHP_FE_END
 };
 
-zend_function_entry ThreadRef_methods[] = {
-    PHP_ME(ThreadRef, __construct, ThreadRef___construct_arginfo, ZEND_ACC_PUBLIC)
-    PHP_ME(ThreadRef, start, ThreadRef_start_arginfo, ZEND_ACC_PUBLIC)
-    PHP_ME(ThreadRef, join, ThreadRef_join_arginfo, ZEND_ACC_PUBLIC)
+zend_function_entry Thread_methods[] = {
+    PHP_ME(Thread, addTask, Thread_add_task_arginfo, ZEND_ACC_PUBLIC)
+    PHP_ME(Thread, start, Thread_start_arginfo, ZEND_ACC_PUBLIC)
+    PHP_ME(Thread, join, Thread_join_arginfo, ZEND_ACC_PUBLIC)
+    PHP_ME(Thread, taskCount, Thread_task_count_arginfo, ZEND_ACC_PUBLIC)
     PHP_FE_END
 };
 
@@ -474,16 +498,14 @@ PHP_MINIT_FUNCTION(pht)
 
     INIT_CLASS_ENTRY(ce, "Threaded", Threaded_methods);
 	Threaded_ce = zend_register_internal_interface(&ce);
-    //
 
-    // @todo should be a final class for safety (due to __construct usage)
-    INIT_CLASS_ENTRY(ce, "ThreadRef", ThreadRef_methods);
-    ThreadRef_ce = zend_register_internal_class(&ce);
-    ThreadRef_ce->create_object = threadref_ctor;
+    INIT_CLASS_ENTRY(ce, "Thread", Thread_methods);
+    Thread_ce = zend_register_internal_class(&ce);
+    Thread_ce->create_object = thread_ctor;
 
-    memcpy(&threadref_handlers, zh, sizeof(zend_object_handlers));
+    memcpy(&thread_handlers, zh, sizeof(zend_object_handlers));
 
-    threadref_handlers.offset = XtOffsetOf(thread_t, obj);
+    thread_handlers.offset = XtOffsetOf(thread_t, obj);
 
     INIT_CLASS_ENTRY(ce, "MessageQueue", MessageQueue_methods);
     MessageQueue_ce = zend_register_internal_class(&ce);

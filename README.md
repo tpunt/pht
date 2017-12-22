@@ -56,14 +56,52 @@ $tr->join();
 
 So now, only message queues need to be safely passed around.
 
-The `MessageQueue` class looks as follows:
+## API
+
+```php
+interface Threaded
+{
+    public function run() void;
+}
+
+class MessageQueue
+{
+    public function finish(void) : void;
+    public function isFinished(void) : bool;
+    public function push(mixed $message) : void;
+    public function pop(mixed &$message) : bool;
+    public function hasMessages(void) : bool;
+}
+
+class Thread // previously ThreadRef
+{
+    public function addTask(string $className, mixed ...$ctorArgs);
+    public function taskCount(void) : int;
+    public function threadStatus(void) : int;
+    public function start(void) : void;
+    public function join(void) : void;
+}
+```
+
+`Threaded` interface:
+```php
+interface Threaded
+{
+    /*
+    The entry point function for a new Threaded task.
+    */
+    public function run() void;
+}
+```
+
+`MessageQueue` class:
 ```php
 class MessageQueue
 {
     /*
      * Set the message queue to a finished state.
      *
-     * This notifies threads that are using it that no new messages will be.
+     * This notifies threads that are using it that no new messages will be
      * pushed to the queue
      */
     public function finish(void) : void;
@@ -100,8 +138,13 @@ class MessageQueue
 }
 ```
 
+`Thread` class:
+```php
+...todo...
+```
+
 With the above in mind, the serialisation points are:
- - The arguments to the `ThreadRef` constructor
+ - The arguments to the `Thread` constructor
  - The values pushed to the message queue
 
 In future, I may implement other IPC techniques, too (such as message passing). The need for additional communication techniques will hopefully become clearer in future.

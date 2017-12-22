@@ -1,6 +1,6 @@
 <?php
 
-class T implements Threaded
+class Task implements Threaded
 {
     private $mq;
 
@@ -11,21 +11,51 @@ class T implements Threaded
 
     public function run()
     {
-        $this->mq->push(1);
-        $this->mq->finish();
+        $this->mq->push(rand());
     }
 }
 
-$mq = new MessageQueue();
+/*
+Current API
+*/
 
-$tr = new ThreadRef(T::class, $mq);
+// $mq = new MessageQueue();
+// $tr = new ThreadRef(Task::class, $mq);
+//
+// $tr->start();
+//
+// while (!$mq->isFinished() || $mq->hasMessages()) {
+//     if ($mq->pop($message)) {
+//         var_dump($message);
+//     }
+// }
+//
+// $tr->join();
 
-$tr->start();
+/*
+New API?
+Thread reuse example
+*/
 
-while (!$mq->isFinished() || $mq->hasMessages()) {
-    if ($mq->pop($message)) {
-        var_dump($message);
-    }
-}
+// $mq = new MessageQueue();
+// $thread = new Thread();
+// $tasksRemaining = 2;
+//
+// $thread->addTask(Task::class, $mq);
+// $thread->addTask(Task::class, $mq);
+//
+// $thread->start();
+//
+// while ($tasksRemaining) {
+//     if ($mq->pop($message)) {
+//         --$tasksRemaining;
+//         var_dump($message);
+//     }
+// }
+//
+// $thread->join();
 
-$tr->join();
+/*
+New API?
+Pool example
+*/
