@@ -11,8 +11,10 @@ class SomeClass implements Threaded
     public function run() {}
 }
 
-// ThreadRef::__construct(string $className, mixed ...$constructorArgs)
-$tr = new ThreadRef(SomeClass::class);
+$thread = new Thread();
+
+// Thread::addTask(string $className, mixed ...$constructorArgs)
+$thread->addTask(SomeClass::class);
 ```
 
 By taking this approach, `Threaded` objects themselves no longer require their properties to be serialised. This is because we no longer need to pass around `Threaded` objects anymore, and so `Threaded` objects no longer need to be able to operate in multiple execution contexts.
@@ -23,7 +25,7 @@ In code, this looks like the following:
 ```php
 <?php
 
-class T implements Threaded
+class Task implements Threaded
 {
     private $mq;
 
@@ -40,10 +42,10 @@ class T implements Threaded
 }
 
 $mq = new MessageQueue();
+$thread = new Thread();
 
-$tr = new ThreadRef(T::class, $mq);
-
-$tr->start();
+$thread->start();
+$thread->addTask(Task::class, $mq);
 
 while (!$mq->isFinished() || $mq->hasMessages()) {
     if ($mq->pop($message)) {
@@ -51,13 +53,16 @@ while (!$mq->isFinished() || $mq->hasMessages()) {
     }
 }
 
-$tr->join();
+$thread->join();
 ```
 
 So now, only message queues need to be safely passed around.
 
+See also the [examples](https://github.com/tpunt/pht/tree/master/examples) folder.
+
 ## API
 
+Quick overview:
 ```php
 interface Threaded
 {
@@ -88,8 +93,8 @@ class Thread // previously ThreadRef
 interface Threaded
 {
     /*
-    The entry point function for a new Threaded task.
-    */
+     * The entry point function for a new Threaded task.
+     */
     public function run() void;
 }
 ```
@@ -140,11 +145,48 @@ class MessageQueue
 
 `Thread` class:
 ```php
-...todo...
+class Thread // previously ThreadRef
+{
+    /*
+     * Adds a new task to the thread.
+     *
+     * The arguments here will all be serialised, and the constructor will be
+     * invoked in the thread itself (where the object will also be created).
+     */
+    public function addTask(string $className, mixed ...$ctorArgs);
+
+    /*
+     * Returns a count of the number of tasks the thread has.
+     */
+    public function taskCount(void) : int;
+
+    /*
+     * Returns the current status of a thread.
+     *
+     * Valid statuses: UNDER_CONSTRUCTION, ACTIVE, FINISHED
+     */
+    public function threadStatus(void) : int;
+
+    /*
+     * Starts the thread.
+     *
+     * This is where a new context is created. Any tasks lined up will begin
+     * being processed.
+     */
+    public function start(void) : void;
+
+    /*
+     * Joins the thread.
+     *
+     * Destroys the newly created context, along with any tasks associated with
+     * the thread.
+     */
+    public function join(void) : void;
+}
 ```
 
 With the above in mind, the serialisation points are:
- - The arguments to the `Thread` constructor
+ - The arguments to the `Thread::addTask` function
  - The values pushed to the message queue
 
 In future, I may implement other IPC techniques, too (such as message passing). The need for additional communication techniques will hopefully become clearer in future.
