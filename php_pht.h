@@ -104,11 +104,19 @@ typedef struct _message_t {
     struct _message_t *next;
 } message_t;
 
-typedef struct _message_queue_t {
+typedef struct _message_queue_internal_t {
     pthread_mutex_t lock;
     status_t status;
     message_t *messages;
     message_t *last_message; // prevents traversing all messages when enqueueing
+} message_queue_internal_t;
+
+typedef struct _message_queue_t {
+    message_queue_internal_t *mqi;
+    // pthread_mutex_t lock;
+    // status_t status;
+    // message_t *messages;
+    // message_t *last_message; // prevents traversing all messages when enqueueing
     zend_object obj;
 } message_queue_t;
 
@@ -135,5 +143,8 @@ typedef struct _threads_t {
 } threads_t;
 
 extern thread_t main_thread;
+extern zend_class_entry *MessageQueue_ce;
+
+void free_message_queue_internal(message_queue_internal_t *mqi);
 
 #endif

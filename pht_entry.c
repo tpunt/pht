@@ -93,6 +93,33 @@ void pht_convert_entry_to_zval(zval *value, entry_t *e)
                 efree(name);
             }
             break;
+        case PHT_MESSAGE_QUEUE:
+            {
+                zend_string *ce_name = zend_string_init("MessageQueue", sizeof("MessageQueue") - 1, 0);
+                zend_class_entry *ce = zend_fetch_class_by_name(ce_name, NULL, ZEND_FETCH_CLASS_DEFAULT | ZEND_FETCH_CLASS_EXCEPTION);
+                zend_function *constructor; // @todo if MessageQueue has been overridden, then ctor should be invoked
+                zval zobj;
+
+                // instantiate new MessageQueue object, assign previous mqi to current mqi (free current mqi?)
+
+                if (object_init_ex(&zobj, ce) != SUCCESS) {
+                    // @todo this will throw an exception in the new thread, rather than at
+                    // the call site - how should it behave?
+                    zend_throw_exception_ex(zend_ce_exception, 0, "Failed to threaded object from class '%s'\n", ZSTR_VAL(ce_name));
+                }
+
+                message_queue_t *old_message_queue = (message_queue_t *)((char *)&ENTRY_MQ(e)->obj - ENTRY_MQ(e)->obj.handlers->offset);
+                message_queue_t *new_message_queue = (message_queue_t *)((char *)Z_OBJ(zobj) - Z_OBJ(zobj)->handlers->offset);
+
+                free_message_queue_internal(new_message_queue->mqi);
+
+                new_message_queue->mqi = old_message_queue->mqi;
+
+                zend_string_free(ce_name);
+
+                ZVAL_OBJ(value, Z_OBJ(zobj));
+            }
+            break;
         case IS_OBJECT:
             {
                 size_t buf_len = PHT_STRL(ENTRY_STRING(e));
@@ -158,6 +185,9 @@ void pht_convert_zval_to_entry(entry_t *e, zval *value)
                     ENTRY_FUNC(e) = malloc(sizeof(zend_op_array));
                     memcpy(ENTRY_FUNC(e), zend_get_closure_method_def(value), sizeof(zend_op_array));
                     Z_ADDREF_P(value);
+                } else if (instanceof_function(Z_OBJCE_P(value), MessageQueue_ce)) {
+                    ENTRY_TYPE(e) = PHT_MESSAGE_QUEUE;
+                    ENTRY_MQ(e) = (message_queue_t *)((char *)Z_OBJ_P(value) - Z_OBJ_P(value)->handlers->offset);
                 } else {
                     // temporary solution - just serialise it and to the hell with the consequences
                     smart_str smart = {0};
