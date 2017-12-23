@@ -286,17 +286,20 @@ static zend_object *thread_ctor(zend_class_entry *entry)
 static zend_object *message_queue_ctor(zend_class_entry *entry)
 {
     message_queue_t *message_queue = ecalloc(1, sizeof(message_queue_t) + zend_object_properties_size(entry));
-    message_queue_internal_t *mqi = calloc(1, sizeof(message_queue_internal_t));
 
     zend_object_std_init(&message_queue->obj, entry);
     object_properties_init(&message_queue->obj, entry);
 
     message_queue->obj.handlers = &message_queue_handlers;
 
-    mqi->status = ACTIVE;
-    pthread_mutex_init(&mqi->lock, NULL);
+    if (!PHT_ZG(skip_mqi_creation)) {
+        message_queue_internal_t *mqi = calloc(1, sizeof(message_queue_internal_t));
 
-    message_queue->mqi = mqi;
+        mqi->status = ACTIVE;
+        pthread_mutex_init(&mqi->lock, NULL);
+
+        message_queue->mqi = mqi;
+    }
 
     return &message_queue->obj;
 }
@@ -535,6 +538,7 @@ PHP_RINIT_FUNCTION(pht)
 	ZEND_TSRMLS_CACHE_UPDATE();
 
     zend_hash_init(&PHT_ZG(interned_strings), 8, NULL, ZVAL_PTR_DTOR, 0);
+    PHT_ZG(skip_mqi_creation) = 0;
     // main_thread.id = (ulong) pthread_self();
     // main_thread.ls = TSRMLS_CACHE;
 

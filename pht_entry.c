@@ -100,7 +100,7 @@ void pht_convert_entry_to_zval(zval *value, entry_t *e)
                 zend_function *constructor; // @todo if MessageQueue has been overridden, then ctor should be invoked
                 zval zobj;
 
-                // instantiate new MessageQueue object, assign previous mqi to current mqi (free current mqi?)
+                PHT_ZG(skip_mqi_creation) = 1;
 
                 if (object_init_ex(&zobj, ce) != SUCCESS) {
                     // @todo this will throw an exception in the new thread, rather than at
@@ -108,10 +108,10 @@ void pht_convert_entry_to_zval(zval *value, entry_t *e)
                     zend_throw_exception_ex(zend_ce_exception, 0, "Failed to threaded object from class '%s'\n", ZSTR_VAL(ce_name));
                 }
 
+                PHT_ZG(skip_mqi_creation) = 0;
+
                 message_queue_t *old_message_queue = (message_queue_t *)((char *)&ENTRY_MQ(e)->obj - ENTRY_MQ(e)->obj.handlers->offset);
                 message_queue_t *new_message_queue = (message_queue_t *)((char *)Z_OBJ(zobj) - Z_OBJ(zobj)->handlers->offset);
-
-                free_message_queue_internal(new_message_queue->mqi);
 
                 new_message_queue->mqi = old_message_queue->mqi;
 
