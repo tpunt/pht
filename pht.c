@@ -130,7 +130,7 @@ void *worker_function(thread_t *thread)
         zend_string *ce_name = zend_string_init(task->class_name.val, task->class_name.len, 0);
         zend_class_entry *ce = zend_fetch_class_by_name(ce_name, NULL, ZEND_FETCH_CLASS_DEFAULT | ZEND_FETCH_CLASS_EXCEPTION);
         zend_function *constructor, *run;
-        zval zobj;
+        zval zobj, zargs[task->class_ctor_argc]; // goto cannot bypass VLAs...
 
         if (object_init_ex(&zobj, ce) != SUCCESS) {
             // @todo this will throw an exception in the new thread, rather than at
@@ -146,14 +146,23 @@ void *worker_function(thread_t *thread)
 
         constructor = Z_OBJ_HT(zobj)->get_constructor(Z_OBJ(zobj));
 
+        /*
+        This is done here, rather than in the constructor branch, because if
+        a message queue is passed in as an argument to Thread::addTask, then
+        its reference count will be incremented. If no constructor is declared,
+        however, then the constructor branch will never be hit, the
+        corresponding message queue object will not be constructed, and so the
+        reference count will not be decremented again. So we always convert
+        serialised entries to their zvals to prevent this issue.
+        */
+        for (int i = 0; i < task->class_ctor_argc; ++i) {
+            pht_convert_entry_to_zval(zargs + i, task->class_ctor_args + i);
+        }
+
         if (constructor) {
             int result;
-            zval retval, zargs[task->class_ctor_argc];
+            zval retval;
             zend_fcall_info fci;
-
-            for (int i = 0; i < task->class_ctor_argc; ++i) {
-                pht_convert_entry_to_zval(zargs + i, task->class_ctor_args + i);
-            }
 
             fci.size = sizeof(fci);
             fci.object = Z_OBJ(zobj);
@@ -204,6 +213,10 @@ void *worker_function(thread_t *thread)
 
 finish:
         zend_string_free(ce_name);
+
+        if (task->class_ctor_args) {
+            free(task->class_ctor_args);
+        }
         free(task);
     }
 
@@ -561,6 +574,7 @@ PHP_MINIT_FUNCTION(pht)
 PHP_MSHUTDOWN_FUNCTION(pht)
 {
     pthread_mutex_destroy(&threads.lock);
+    free(threads.thread_table);
 
 	return SUCCESS;
 }
