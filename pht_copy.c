@@ -275,7 +275,7 @@ static HashTable *copy_static_variables(HashTable *old_static_variables)
                 case IS_CONSTANT:
                     // constant names are not interned (in PHP 7.2, at least)
                     ZVAL_NEW_STR(&copy, zend_string_dup(Z_STR_P(value), 0));
-					break;
+                    break;
                 case IS_CONSTANT_AST: // @todo PHP 7.2 specific
                     ZVAL_NEW_AST(&copy, pht_zend_ast_copy(Z_ASTVAL_P(value)));
                     break;
