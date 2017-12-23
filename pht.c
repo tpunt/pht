@@ -279,6 +279,13 @@ static zend_object *thread_ctor(zend_class_entry *entry)
     return &thread->obj;
 }
 
+void th_free_obj(zend_object *obj)
+{
+    thread_t *thread = (thread_t *)((char *)obj - obj->handlers->offset);
+
+    thread_destroy(thread);
+}
+
 static zend_object *message_queue_ctor(zend_class_entry *entry)
 {
     message_queue_t *message_queue = ecalloc(1, sizeof(message_queue_t) + zend_object_properties_size(entry));
@@ -299,11 +306,6 @@ static zend_object *message_queue_ctor(zend_class_entry *entry)
     }
 
     return &message_queue->obj;
-}
-
-void mqh_dtor_obj(zend_object *obj)
-{
-    zend_object_std_dtor(obj);
 }
 
 void mqh_free_obj(zend_object *obj)
@@ -537,6 +539,7 @@ PHP_MINIT_FUNCTION(pht)
     memcpy(&thread_handlers, zh, sizeof(zend_object_handlers));
 
     thread_handlers.offset = XtOffsetOf(thread_t, obj);
+    thread_handlers.free_obj = th_free_obj;
 
     INIT_CLASS_ENTRY(ce, "MessageQueue", MessageQueue_methods);
     MessageQueue_ce = zend_register_internal_class(&ce);
@@ -545,7 +548,6 @@ PHP_MINIT_FUNCTION(pht)
     memcpy(&message_queue_handlers, zh, sizeof(zend_object_handlers));
 
     message_queue_handlers.offset = XtOffsetOf(message_queue_t, obj);
-    message_queue_handlers.dtor_obj = mqh_dtor_obj;
     message_queue_handlers.free_obj = mqh_free_obj;
 
     threads.size = 16;
