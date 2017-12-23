@@ -35,7 +35,7 @@ extern zend_module_entry pht_module_entry;
 #endif
 
 #ifndef ZTS
-#   error "ZTS is required"
+#  error "ZTS is required"
 #endif
 
 #include <main/php.h>

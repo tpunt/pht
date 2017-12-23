@@ -535,7 +535,17 @@ zend_function_entry MessageQueue_methods[] = {
     PHP_FE_END
 };
 
+zval *mqh_read_property_handle(zval *object, zval *member, int type, void **cache, zval *rv)
+{
+    zend_throw_exception(zend_ce_exception, "Properties on MessageQueue objects are not enabled", 0);
 
+    return &EG(uninitialized_zval);
+}
+
+void mqh_write_property_handle(zval *object, zval *member, zval *value, void **cache_slot)
+{
+    zend_throw_exception(zend_ce_exception, "Properties on MessageQueue objects are not enabled", 0);
+}
 
 PHP_MINIT_FUNCTION(pht)
 {
@@ -562,6 +572,8 @@ PHP_MINIT_FUNCTION(pht)
 
     message_queue_handlers.offset = XtOffsetOf(message_queue_t, obj);
     message_queue_handlers.free_obj = mqh_free_obj;
+    message_queue_handlers.read_property = mqh_read_property_handle;
+    message_queue_handlers.write_property = mqh_write_property_handle;
 
     threads.size = 16;
     threads.used = 0;
