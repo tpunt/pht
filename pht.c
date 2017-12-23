@@ -368,6 +368,10 @@ PHP_METHOD(Thread, start)
 {
     thread_t *thread = (thread_t *)((char *)Z_OBJ(EX(This)) - Z_OBJ(EX(This))->handlers->offset);
 
+    if (zend_parse_parameters_none() != SUCCESS) {
+        return;
+    }
+
     main_thread.id = (ulong) pthread_self();
     main_thread.ls = TSRMLS_CACHE;
 
@@ -381,6 +385,10 @@ PHP_METHOD(Thread, join)
 {
     thread_t *thread = (thread_t *)((char *)Z_OBJ(EX(This)) - Z_OBJ(EX(This))->handlers->offset);
 
+    if (zend_parse_parameters_none() != SUCCESS) {
+        return;
+    }
+
     thread->status = DESTROYED;
 
     pthread_join(thread->thread, NULL);
@@ -392,6 +400,10 @@ ZEND_END_ARG_INFO()
 PHP_METHOD(Thread, taskCount)
 {
     thread_t *thread = (thread_t *)((char *)Z_OBJ(EX(This)) - Z_OBJ(EX(This))->handlers->offset);
+
+    if (zend_parse_parameters_none() != SUCCESS) {
+        return;
+    }
 
     RETVAL_LONG(thread->tasks.size);
 }
@@ -446,7 +458,7 @@ PHP_METHOD(MessageQueue, hasMessages)
     pthread_mutex_unlock(&message_queue->mqi->lock);
 }
 
-ZEND_BEGIN_ARG_INFO_EX(MessageQueue_set_state_arginfo, 0, 0, 0)
+ZEND_BEGIN_ARG_INFO_EX(MessageQueue_set_state_arginfo, 0, 0, 1)
 ZEND_END_ARG_INFO()
 
 PHP_METHOD(MessageQueue, setState)
