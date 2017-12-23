@@ -114,7 +114,8 @@ typedef struct _task_t {
 
 typedef struct _message_queue_internal_t {
     pthread_mutex_t lock;
-    status_t status;
+    zend_long state;
+    uint32_t refcount;
     // queue_t messages;
     message_t *messages;
     message_t *last_message; // prevents traversing all messages when enqueueing

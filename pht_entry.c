@@ -186,8 +186,14 @@ void pht_convert_zval_to_entry(entry_t *e, zval *value)
                     memcpy(ENTRY_FUNC(e), zend_get_closure_method_def(value), sizeof(zend_op_array));
                     Z_ADDREF_P(value);
                 } else if (instanceof_function(Z_OBJCE_P(value), MessageQueue_ce)) {
+                    message_queue_t *message_queue = (message_queue_t *)((char *)Z_OBJ_P(value) - Z_OBJ_P(value)->handlers->offset);
+
                     ENTRY_TYPE(e) = PHT_MESSAGE_QUEUE;
-                    ENTRY_MQ(e) = (message_queue_t *)((char *)Z_OBJ_P(value) - Z_OBJ_P(value)->handlers->offset);
+                    ENTRY_MQ(e) = message_queue;
+
+                    pthread_mutex_lock(&message_queue->mqi->lock);
+                    ++message_queue->mqi->refcount;
+                    pthread_mutex_unlock(&message_queue->mqi->lock);
                 } else {
                     // temporary solution - just serialise it and to the hell with the consequences
                     smart_str smart = {0};

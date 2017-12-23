@@ -71,14 +71,14 @@ interface Threaded
 
 class MessageQueue
 {
-    public function finish(void) : void;
-    public function isFinished(void) : bool;
     public function push(mixed $message) : void;
     public function pop(mixed &$message) : bool;
     public function hasMessages(void) : bool;
+    public function getState(void) : void;
+    public function setState(void) : bool;
 }
 
-class Thread // previously ThreadRef
+class Thread
 {
     public function addTask(string $className, mixed ...$ctorArgs);
     public function taskCount(void) : int;
@@ -99,23 +99,11 @@ interface Threaded
 }
 ```
 
-`MessageQueue` class:
+`MessageQueue` class is reference-counted across threads, and so it does not
+need to be explicitly destroyed. It looks as follows:
 ```php
 class MessageQueue
 {
-    /*
-     * Set the message queue to a finished state.
-     *
-     * This notifies threads that are using it that no new messages will be
-     * pushed to the queue
-     */
-    public function finish(void) : void;
-
-    /*
-     * Checks to see if the queue has a finished state.
-     */
-    public function isFinished(void) : bool;
-
     /*
      * Pushes a message to the queue.
      */
@@ -140,6 +128,18 @@ class MessageQueue
      * finished.
      */
     public function hasMessages(void) : bool;
+
+    /*
+     * Sets an internal state of the message queue.
+     *
+     * This can enable for flags or counters to be implemented on the queue.
+     */
+    public function setState(int $state) : void;
+
+    /*
+     * Gets the internal state of the message queue.
+     */
+    public function getState(void) : int;
 }
 ```
 

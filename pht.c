@@ -220,17 +220,13 @@ void message_queue_push(message_queue_internal_t *mqi, message_t *message)
 {
     pthread_mutex_lock(&mqi->lock);
 
-    if (mqi->status == FINISHED) { // @todo may not need mutex lock
-        zend_throw_exception(zend_ce_exception, "Attempted to push a message to a finished queue", 0);
+    if (!mqi->messages) {
+        mqi->messages = message;
     } else {
-        if (!mqi->messages) {
-            mqi->messages = message;
-        } else {
-            mqi->last_message->next = message;
-        }
-
-        mqi->last_message = message;
+        mqi->last_message->next = message;
     }
+
+    mqi->last_message = message;
 
     pthread_mutex_unlock(&mqi->lock);
 }
@@ -295,13 +291,32 @@ static zend_object *message_queue_ctor(zend_class_entry *entry)
     if (!PHT_ZG(skip_mqi_creation)) {
         message_queue_internal_t *mqi = calloc(1, sizeof(message_queue_internal_t));
 
-        mqi->status = ACTIVE;
+        mqi->state = 0;
+        mqi->refcount = 1;
         pthread_mutex_init(&mqi->lock, NULL);
 
         message_queue->mqi = mqi;
     }
 
     return &message_queue->obj;
+}
+
+void mqh_dtor_obj(zend_object *obj)
+{
+    zend_object_std_dtor(obj);
+}
+
+void mqh_free_obj(zend_object *obj)
+{
+    message_queue_t *message_queue = (message_queue_t *)((char *)obj - obj->handlers->offset);
+
+    pthread_mutex_lock(&message_queue->mqi->lock);
+    --message_queue->mqi->refcount;
+    pthread_mutex_unlock(&message_queue->mqi->lock);
+
+    if (!message_queue->mqi->refcount) {
+        free_message_queue_internal(message_queue->mqi);
+    }
 }
 
 
@@ -413,43 +428,6 @@ PHP_METHOD(MessageQueue, pop)
     RETURN_BOOL(message_queue_pop(message_queue->mqi, zmessage));
 }
 
-ZEND_BEGIN_ARG_INFO_EX(MessageQueue_finish_arginfo, 0, 0, 0)
-ZEND_END_ARG_INFO()
-
-PHP_METHOD(MessageQueue, finish)
-{
-    message_queue_t *message_queue = (message_queue_t *)((char *)Z_OBJ(EX(This)) - Z_OBJ(EX(This))->handlers->offset);
-
-    if (zend_parse_parameters_none() != SUCCESS) {
-        return;
-    }
-
-    // @todo I don't think a mutex lock needs to be held for this?
-    // I'm going to hold it anyway for now, and performance check things later
-    pthread_mutex_lock(&message_queue->mqi->lock);
-    message_queue->mqi->status = FINISHED;
-    pthread_mutex_unlock(&message_queue->mqi->lock);
-}
-
-ZEND_BEGIN_ARG_INFO_EX(MessageQueue_is_finished_arginfo, 0, 0, 0)
-ZEND_END_ARG_INFO()
-
-PHP_METHOD(MessageQueue, isFinished)
-{
-    message_queue_t *message_queue = (message_queue_t *)((char *)Z_OBJ(EX(This)) - Z_OBJ(EX(This))->handlers->offset);
-
-    if (zend_parse_parameters_none() != SUCCESS) {
-        return;
-    }
-
-    // @todo I don't think a mutex lock needs to be held for this?
-    // I'm going to hold it anyway for now, and performance check things later
-    // Also, this could probably be just a simple property instead of a method
-    pthread_mutex_lock(&message_queue->mqi->lock);
-    RETVAL_BOOL(message_queue->mqi->status == FINISHED);
-    pthread_mutex_unlock(&message_queue->mqi->lock);
-}
-
 ZEND_BEGIN_ARG_INFO_EX(MessageQueue_has_messages_arginfo, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
@@ -465,6 +443,44 @@ PHP_METHOD(MessageQueue, hasMessages)
     // I'm going to hold it anyway for now, and performance check things later
     pthread_mutex_lock(&message_queue->mqi->lock);
     RETVAL_BOOL(message_queue->mqi->messages != NULL);
+    pthread_mutex_unlock(&message_queue->mqi->lock);
+}
+
+ZEND_BEGIN_ARG_INFO_EX(MessageQueue_set_state_arginfo, 0, 0, 0)
+ZEND_END_ARG_INFO()
+
+PHP_METHOD(MessageQueue, setState)
+{
+    message_queue_t *message_queue = (message_queue_t *)((char *)Z_OBJ(EX(This)) - Z_OBJ(EX(This))->handlers->offset);
+    zend_long state;
+
+    ZEND_PARSE_PARAMETERS_START(1, 1)
+        Z_PARAM_LONG(state)
+    ZEND_PARSE_PARAMETERS_END();
+
+    // @todo I don't think a mutex lock needs to be held for this?
+    // I'm going to hold it anyway for now, and performance check things later
+    pthread_mutex_lock(&message_queue->mqi->lock);
+    message_queue->mqi->state = state;
+    pthread_mutex_unlock(&message_queue->mqi->lock);
+}
+
+ZEND_BEGIN_ARG_INFO_EX(MessageQueue_get_state_arginfo, 0, 0, 0)
+ZEND_END_ARG_INFO()
+
+PHP_METHOD(MessageQueue, getState)
+{
+    message_queue_t *message_queue = (message_queue_t *)((char *)Z_OBJ(EX(This)) - Z_OBJ(EX(This))->handlers->offset);
+
+    if (zend_parse_parameters_none() != SUCCESS) {
+        return;
+    }
+
+    // @todo I don't think a mutex lock needs to be held for this?
+    // I'm going to hold it anyway for now, and performance check things later
+    // Also, this could probably be just a simple property instead of a method
+    pthread_mutex_lock(&message_queue->mqi->lock);
+    RETVAL_LONG(message_queue->mqi->state);
     pthread_mutex_unlock(&message_queue->mqi->lock);
 }
 
@@ -486,9 +502,9 @@ zend_function_entry Thread_methods[] = {
 zend_function_entry MessageQueue_methods[] = {
     PHP_ME(MessageQueue, push, MessageQueue_push_arginfo, ZEND_ACC_PUBLIC)
     PHP_ME(MessageQueue, pop, MessageQueue_pop_arginfo, ZEND_ACC_PUBLIC)
-    PHP_ME(MessageQueue, finish, MessageQueue_finish_arginfo, ZEND_ACC_PUBLIC)
-    PHP_ME(MessageQueue, isFinished, MessageQueue_is_finished_arginfo, ZEND_ACC_PUBLIC)
     PHP_ME(MessageQueue, hasMessages, MessageQueue_has_messages_arginfo, ZEND_ACC_PUBLIC)
+    PHP_ME(MessageQueue, setState, MessageQueue_set_state_arginfo, ZEND_ACC_PUBLIC)
+    PHP_ME(MessageQueue, getState, MessageQueue_get_state_arginfo, ZEND_ACC_PUBLIC)
     PHP_FE_END
 };
 
@@ -517,6 +533,8 @@ PHP_MINIT_FUNCTION(pht)
     memcpy(&message_queue_handlers, zh, sizeof(zend_object_handlers));
 
     message_queue_handlers.offset = XtOffsetOf(message_queue_t, obj);
+    message_queue_handlers.dtor_obj = mqh_dtor_obj;
+    message_queue_handlers.free_obj = mqh_free_obj;
 
     threads.size = 16;
     threads.used = 0;
