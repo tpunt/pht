@@ -27,11 +27,11 @@ extern zend_module_entry pht_module_entry;
 #define PHP_PHT_VERSION "0.1.0"
 
 #ifdef PHP_WIN32
-#	define PHP_PHT_API __declspec(dllexport)
+#  define PHP_PHT_API __declspec(dllexport)
 #elif defined(__GNUC__) && __GNUC__ >= 4
-#	define PHP_PHT_API __attribute__ ((visibility("default")))
+#  define PHP_PHT_API __attribute__ ((visibility("default")))
 #else
-#	define PHP_PHT_API
+#  define PHP_PHT_API
 #endif
 
 #ifndef ZTS
@@ -77,7 +77,7 @@ extern zend_module_entry pht_module_entry;
 #include "pht_queue.h"
 
 ZEND_BEGIN_MODULE_GLOBALS(pht)
-	HashTable interned_strings; // used for op_array file names
+    HashTable interned_strings; // used for op_array file names
     zend_bool skip_mqi_creation;
 ZEND_END_MODULE_GLOBALS(pht)
 

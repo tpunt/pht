@@ -543,7 +543,7 @@ PHP_MINIT_FUNCTION(pht)
     zend_object_handlers *zh = zend_get_std_object_handlers();
 
     INIT_CLASS_ENTRY(ce, "Threaded", Threaded_methods);
-	Threaded_ce = zend_register_internal_interface(&ce);
+    Threaded_ce = zend_register_internal_interface(&ce);
 
     INIT_CLASS_ENTRY(ce, "Thread", Thread_methods);
     Thread_ce = zend_register_internal_class(&ce);
@@ -568,7 +568,7 @@ PHP_MINIT_FUNCTION(pht)
     threads.thread_table = malloc(threads.size * sizeof(thread_t));
     pthread_mutex_init(&threads.lock, NULL);
 
-	return SUCCESS;
+    return SUCCESS;
 }
 
 PHP_MSHUTDOWN_FUNCTION(pht)
@@ -576,50 +576,50 @@ PHP_MSHUTDOWN_FUNCTION(pht)
     pthread_mutex_destroy(&threads.lock);
     free(threads.thread_table);
 
-	return SUCCESS;
+    return SUCCESS;
 }
 
 PHP_RINIT_FUNCTION(pht)
 {
-	ZEND_TSRMLS_CACHE_UPDATE();
+    ZEND_TSRMLS_CACHE_UPDATE();
 
     zend_hash_init(&PHT_ZG(interned_strings), 8, NULL, ZVAL_PTR_DTOR, 0);
     PHT_ZG(skip_mqi_creation) = 0;
     // main_thread.id = (ulong) pthread_self();
     // main_thread.ls = TSRMLS_CACHE;
 
-	return SUCCESS;
+    return SUCCESS;
 }
 
 PHP_RSHUTDOWN_FUNCTION(pht)
 {
     zend_hash_destroy(&PHT_ZG(interned_strings));
 
-	return SUCCESS;
+    return SUCCESS;
 }
 
 PHP_MINFO_FUNCTION(pht)
 {
-	php_info_print_table_start();
-	php_info_print_table_header(2, "pht support", "enabled");
-	php_info_print_table_end();
+    php_info_print_table_start();
+    php_info_print_table_header(2, "pht support", "enabled");
+    php_info_print_table_end();
 }
 
 zend_module_entry pht_module_entry = {
-	STANDARD_MODULE_HEADER,
-	"pht",
-	NULL,
-	PHP_MINIT(pht),
-	PHP_MSHUTDOWN(pht),
-	PHP_RINIT(pht),		/* Replace with NULL if there's nothing to do at request start */
-	PHP_RSHUTDOWN(pht),	/* Replace with NULL if there's nothing to do at request end */
-	PHP_MINFO(pht),
-	PHP_PHT_VERSION,
+    STANDARD_MODULE_HEADER,
+    "pht",
+    NULL,
+    PHP_MINIT(pht),
+    PHP_MSHUTDOWN(pht),
+    PHP_RINIT(pht),
+    PHP_RSHUTDOWN(pht),
+    PHP_MINFO(pht),
+    PHP_PHT_VERSION,
     PHP_MODULE_GLOBALS(pht),
     NULL,
     NULL,
     NULL,
-	STANDARD_MODULE_PROPERTIES_EX
+    STANDARD_MODULE_PROPERTIES_EX
 };
 
 #ifdef COMPILE_DL_PHT

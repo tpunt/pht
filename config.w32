@@ -8,6 +8,5 @@
 // ARG_ENABLE("pht", "enable pht support", "no");
 
 if (PHP_PHT != "no") {
-	EXTENSION("pht", "pht.c", PHP_EXTNAME_SHARED, "/DZEND_ENABLE_STATIC_TSRMLS_CACHE=1");
+    EXTENSION("pht", "pht.c", PHP_EXTNAME_SHARED, "/DZEND_ENABLE_STATIC_TSRMLS_CACHE=1");
 }
-
