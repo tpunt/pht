@@ -75,10 +75,12 @@ extern zend_module_entry pht_module_entry;
 #include "pht_general.h"
 #include "pht_entry.h"
 #include "pht_queue.h"
+#include "pht_hashtable.h"
 
 ZEND_BEGIN_MODULE_GLOBALS(pht)
     HashTable interned_strings; // used for op_array file names
     zend_bool skip_mqi_creation;
+    zend_bool skip_htoi_creation;
 ZEND_END_MODULE_GLOBALS(pht)
 
 ZEND_EXTERN_MODULE_GLOBALS(pht)
@@ -93,6 +95,8 @@ ZEND_EXTERN_MODULE_GLOBALS(pht)
 #if defined(ZTS) && defined(COMPILE_DL_PHT)
 ZEND_TSRMLS_CACHE_EXTERN()
 #endif
+
+typedef struct _entry_t entry_t;
 
 typedef enum _status_t {
     UNDER_CONSTRUCTION,
@@ -126,6 +130,19 @@ typedef struct _message_queue_t {
     zend_object obj;
 } message_queue_t;
 
+typedef struct _hashtable_obj_internal_t {
+    pht_hashtable_t hashtable;
+    pthread_mutex_t lock;
+    uint32_t refcount;
+    zend_ulong vn;
+} hashtable_obj_internal_t;
+
+typedef struct _hashtable_obj_t {
+    hashtable_obj_internal_t *htoi;
+    zend_ulong vn;
+    zend_object obj;
+} hashtable_obj_t;
+
 typedef struct _thread_t {
     pthread_t thread; // must be first member
     int tid; // use thread as global in tls instead?
@@ -150,6 +167,7 @@ typedef struct _threads_t {
 
 extern thread_t main_thread;
 extern zend_class_entry *MessageQueue_ce;
+extern zend_class_entry *HashTable_ce;
 
 void free_message_queue_internal(message_queue_internal_t *mqi);
 

@@ -120,6 +120,33 @@ void pht_convert_entry_to_zval(zval *value, entry_t *e)
                 ZVAL_OBJ(value, Z_OBJ(zobj));
             }
             break;
+        case PHT_HASH_TABLE:
+            {
+                zend_string *ce_name = zend_string_init("HashTable", sizeof("HashTable") - 1, 0);
+                zend_class_entry *ce = zend_fetch_class_by_name(ce_name, NULL, ZEND_FETCH_CLASS_DEFAULT | ZEND_FETCH_CLASS_EXCEPTION);
+                zend_function *constructor; // @todo if HashTable has been overridden, then ctor should be invoked
+                zval zobj;
+
+                PHT_ZG(skip_htoi_creation) = 1;
+
+                if (object_init_ex(&zobj, ce) != SUCCESS) {
+                    // @todo this will throw an exception in the new thread, rather than at
+                    // the call site - how should it behave?
+                    zend_throw_exception_ex(zend_ce_exception, 0, "Failed to threaded object from class '%s'\n", ZSTR_VAL(ce_name));
+                }
+
+                PHT_ZG(skip_htoi_creation) = 0;
+
+                hashtable_obj_t *old_hash_table = (hashtable_obj_t *)((char *)&ENTRY_HT(e)->obj - ENTRY_HT(e)->obj.handlers->offset);
+                hashtable_obj_t *new_hash_table = (hashtable_obj_t *)((char *)Z_OBJ(zobj) - Z_OBJ(zobj)->handlers->offset);
+
+                new_hash_table->htoi = old_hash_table->htoi;
+
+                zend_string_free(ce_name);
+
+                ZVAL_OBJ(value, Z_OBJ(zobj));
+            }
+            break;
         case IS_OBJECT:
             {
                 size_t buf_len = PHT_STRL(ENTRY_STRING(e));
@@ -167,6 +194,7 @@ void pht_convert_zval_to_entry(entry_t *e, zval *value)
 
                 if (EG(exception)) {
                     smart_str_free(&smart);
+                    ENTRY_TYPE(e) = PHT_SERIALISATION_FAILED;
                 } else {
                     zend_string *sval = smart_str_extract(&smart);
 
@@ -194,6 +222,15 @@ void pht_convert_zval_to_entry(entry_t *e, zval *value)
                     pthread_mutex_lock(&message_queue->mqi->lock);
                     ++message_queue->mqi->refcount;
                     pthread_mutex_unlock(&message_queue->mqi->lock);
+                } else if (instanceof_function(Z_OBJCE_P(value), HashTable_ce)) {
+                    hashtable_obj_t *hto = (hashtable_obj_t *)((char *)Z_OBJ_P(value) - Z_OBJ_P(value)->handlers->offset);
+
+                    ENTRY_TYPE(e) = PHT_HASH_TABLE;
+                    ENTRY_HT(e) = hto;
+
+                    pthread_mutex_lock(&hto->htoi->lock);
+                    ++hto->htoi->refcount;
+                    pthread_mutex_unlock(&hto->htoi->lock);
                 } else {
                     // temporary solution - just serialise it and to the hell with the consequences
                     smart_str smart = {0};
@@ -205,6 +242,7 @@ void pht_convert_zval_to_entry(entry_t *e, zval *value)
 
                     if (EG(exception)) {
                         smart_str_free(&smart);
+                        ENTRY_TYPE(e) = PHT_SERIALISATION_FAILED;
                     } else {
                         zend_string *sval = smart_str_extract(&smart);
 
@@ -216,6 +254,9 @@ void pht_convert_zval_to_entry(entry_t *e, zval *value)
                     }
                 }
             }
+            break;
+        default:
+            ENTRY_TYPE(e) = PHT_SERIALISATION_FAILED;
     }
 }
 

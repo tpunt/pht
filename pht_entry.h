@@ -24,6 +24,7 @@
 #include "pht_general.h"
 
 typedef struct _message_queue_t message_queue_t;
+typedef struct _hashtable_obj_t hashtable_obj_t;
 
 typedef struct _entry_t {
     int type;
@@ -34,13 +35,16 @@ typedef struct _entry_t {
         pht_string_t string;
         zend_function *func;
         message_queue_t *message_queue;
+        hashtable_obj_t *hash_table;
         // array
         // object
     } val;
 } entry_t;
 
+#define PHT_SERIALISATION_FAILED -1
 #define PHT_STORE_FUNC 100
 #define PHT_MESSAGE_QUEUE 101
+#define PHT_HASH_TABLE 102
 
 #define ENTRY_TYPE(s) (s)->type
 #define ENTRY_STRING(s) (s)->val.string
@@ -49,6 +53,7 @@ typedef struct _entry_t {
 #define ENTRY_BOOL(s) (s)->val.boolean
 #define ENTRY_FUNC(s) (s)->val.func
 #define ENTRY_MQ(s) (s)->val.message_queue
+#define ENTRY_HT(s) (s)->val.hash_table
 
 void pht_convert_entry_to_zval(zval *value, entry_t *s);
 void pht_convert_zval_to_entry(entry_t *e, zval *value);

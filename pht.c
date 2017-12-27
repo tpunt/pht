@@ -32,10 +32,12 @@
 
 zend_object_handlers thread_handlers;
 zend_object_handlers message_queue_handlers;
+zend_object_handlers hash_table_handlers;
 
 zend_class_entry *Threaded_ce;
 zend_class_entry *Thread_ce;
 zend_class_entry *MessageQueue_ce;
+zend_class_entry *HashTable_ce;
 
 thread_t main_thread;
 threads_t threads;
@@ -78,12 +80,30 @@ void free_message_queue_internal(message_queue_internal_t *mqi)
     while (mqi->messages) {
         message_t *next_message = mqi->messages->next;
 
-        free(mqi->messages->message); // free entry_t
+        // @todo check if object is either another MQ or a HT (its refcount will)
+        // need to be decremented if so.
+        // This should go into a specific queue_destroy method.
+        free(mqi->messages->message); // free entry_t @todo, this should use pht_entry_delete_value
         free(mqi->messages); // free message_t
         mqi->messages = next_message;
     }
 
     free(mqi);
+}
+
+void free_hashtable_internal(hashtable_obj_internal_t *htoi)
+{
+    pthread_mutex_destroy(&htoi->lock);
+
+    // How to see if any values are either another MQ or a HT (where their
+    // refcounts will need to be decremented?). Doing so in the callback may not
+    // be appropriate
+    // What if a MQ is put into the HT, fetched from it, GCed, then the HT is
+    // destroyed? The refcount will be decremented twice. Perhaps use pointer
+    // tagging on entry_t value to mark the internal DS if it has been GCed?
+    // What if it gets repopulated and then GCed again?
+    pht_hashtable_destroy(&htoi->hashtable, pht_entry_delete);
+    free(htoi);
 }
 
 message_t *create_new_message(entry_t *entry)
@@ -220,6 +240,8 @@ finish:
         free(task);
     }
 
+    // @todo clean up all undone tasks
+
     PG(report_memleaks) = 0;
 
     php_request_shutdown(NULL);
@@ -321,6 +343,30 @@ static zend_object *message_queue_ctor(zend_class_entry *entry)
     return &message_queue->obj;
 }
 
+static zend_object *hash_table_ctor(zend_class_entry *entry)
+{
+    hashtable_obj_t *hto = ecalloc(1, sizeof(hashtable_obj_t) + zend_object_properties_size(entry));
+
+    zend_object_std_init(&hto->obj, entry);
+    object_properties_init(&hto->obj, entry);
+
+    hto->obj.handlers = &hash_table_handlers;
+    hto->vn = 0;
+
+    if (!PHT_ZG(skip_htoi_creation)) {
+        hashtable_obj_internal_t *htoi = calloc(1, sizeof(hashtable_obj_internal_t));
+
+        pht_hashtable_init(&htoi->hashtable, 2);
+        pthread_mutex_init(&htoi->lock, NULL);
+        htoi->refcount = 1;
+        htoi->vn = 0;
+
+        hto->htoi = htoi;
+    }
+
+    return &hto->obj;
+}
+
 void mqh_free_obj(zend_object *obj)
 {
     message_queue_t *message_queue = (message_queue_t *)((char *)obj - obj->handlers->offset);
@@ -332,6 +378,153 @@ void mqh_free_obj(zend_object *obj)
     if (!message_queue->mqi->refcount) {
         free_message_queue_internal(message_queue->mqi);
     }
+}
+
+void htoh_dtor_object(zend_object *obj)
+{
+    zend_object_std_dtor(obj);
+}
+
+void htoh_free_obj(zend_object *obj)
+{
+    hashtable_obj_t *hto = (hashtable_obj_t *)((char *)obj - obj->handlers->offset);
+
+    pthread_mutex_lock(&hto->htoi->lock);
+    --hto->htoi->refcount;
+    pthread_mutex_unlock(&hto->htoi->lock);
+
+    if (!hto->htoi->refcount) {
+        free_hashtable_internal(hto->htoi);
+    }
+}
+
+zval *read_dimension_handle(zval *zobj, zval *offset, int type, zval *rv)
+{
+    if (offset == NULL) {
+        zend_throw_error(NULL, "Cannot read an empty offset");
+        return NULL;
+    }
+
+    hashtable_obj_t *hto = (hashtable_obj_t *)((char *)Z_OBJ_P(zobj) - Z_OBJ_P(zobj)->handlers->offset);
+    entry_t *e = NULL;
+
+    switch (Z_TYPE_P(offset)) {
+        case IS_STRING:
+            {
+                pht_string_t key;
+
+                pht_str_update(&key, Z_STRVAL_P(offset), Z_STRLEN_P(offset));
+                e = pht_hashtable_search(&hto->htoi->hashtable, &key);
+                pht_str_free(&key);
+            }
+            break;
+        case IS_LONG:
+            e = pht_hashtable_search_ind(&hto->htoi->hashtable, Z_LVAL_P(offset));
+            break;
+        default:
+            zend_throw_error(NULL, "Invalid offset type"); // @todo cater for Object::__toString()?
+            return NULL;
+    }
+
+    if (!e) {
+        if (type != BP_VAR_IS) {
+            zend_throw_error(NULL, "Undefined offset");
+        }
+        return NULL; // correct?
+    }
+
+    pht_convert_entry_to_zval(rv, e);
+
+    return rv;
+}
+
+void write_dimension_handle(zval *zobj, zval *offset, zval *value)
+{
+    hashtable_obj_t *hto = (hashtable_obj_t *)((char *)Z_OBJ_P(zobj) - Z_OBJ_P(zobj)->handlers->offset);
+    entry_t *entry = create_new_entry(value);
+
+    if (ENTRY_TYPE(entry) == PHT_SERIALISATION_FAILED) {
+        zend_throw_error(NULL, "Failed to serialise the value");
+        free(entry);
+        return;
+    }
+
+    switch (Z_TYPE_P(offset)) {
+        case IS_STRING:
+            {
+                pht_string_t *key = pht_string_new(Z_STRVAL_P(offset), Z_STRLEN_P(offset));
+
+                if (pht_hashtable_search(&hto->htoi->hashtable, key)) {
+                    pht_hashtable_update(&hto->htoi->hashtable, key, entry);
+                } else {
+                    pht_hashtable_insert(&hto->htoi->hashtable, key, entry);
+                }
+
+                ++hto->htoi->vn;
+            }
+            break;
+        case IS_LONG:
+            {
+                if (pht_hashtable_search_ind(&hto->htoi->hashtable, Z_LVAL_P(offset))) {
+                    pht_hashtable_update_ind(&hto->htoi->hashtable, Z_LVAL_P(offset), entry);
+                } else {
+                    pht_hashtable_insert_ind(&hto->htoi->hashtable, Z_LVAL_P(offset), entry);
+                }
+
+                ++hto->htoi->vn;
+            }
+            break;
+        default:
+            zend_throw_error(NULL, "Invalid offset type"); // @todo cater for Object::__toString()?
+            return;
+    }
+}
+
+HashTable *get_debug_info_handle(zval *zobj, int *is_temp)
+{
+    hashtable_obj_t *hto = (hashtable_obj_t *)((char *)Z_OBJ_P(zobj) - Z_OBJ_P(zobj)->handlers->offset);
+    HashTable *zht = emalloc(sizeof(HashTable));
+
+    zend_hash_init(zht, 8, NULL, ZVAL_PTR_DTOR, 0);
+    *is_temp = 1;
+    pht_hashtable_to_zend_hashtable(zht, &hto->htoi->hashtable);
+
+    return zht;
+}
+
+int count_elements_handle(zval *zobj, zend_long *count)
+{
+    hashtable_obj_t *hto = (hashtable_obj_t *)((char *)Z_OBJ_P(zobj) - Z_OBJ_P(zobj)->handlers->offset);
+
+    *count = hto->htoi->hashtable.used;
+
+    return SUCCESS;
+}
+
+HashTable *get_properties_handle(zval *zobj)
+{
+    zend_object *obj = Z_OBJ_P(zobj);
+    hashtable_obj_t *hto = (hashtable_obj_t *)((char *)obj - obj->handlers->offset);
+
+    if (obj->properties && hto->vn == hto->htoi->vn) {
+        return obj->properties;
+    }
+
+    HashTable *zht = emalloc(sizeof(HashTable));
+
+    zend_hash_init(zht, 8, NULL, ZVAL_PTR_DTOR, 0);
+    pht_hashtable_to_zend_hashtable(zht, &hto->htoi->hashtable);
+
+    if (obj->properties) {
+        // @todo safe? Perhaps just wipe HT and insert into it instead?
+        GC_REFCOUNT(obj->properties) = 0;
+        zend_array_destroy(obj->properties);
+    }
+
+    obj->properties = zht;
+    hto->vn = hto->htoi->vn;
+
+    return zht;
 }
 
 
@@ -360,7 +553,7 @@ PHP_METHOD(Thread, addTask)
     thread_t *thread = (thread_t *)((char *)Z_OBJ(EX(This)) - Z_OBJ(EX(This))->handlers->offset);
     task_t *task = malloc(sizeof(task_t));
 
-    string_update(&task->class_name, ZSTR_VAL(ce->name), ZSTR_LEN(ce->name));
+    pht_str_update(&task->class_name, ZSTR_VAL(ce->name), ZSTR_LEN(ce->name));
     task->class_ctor_argc = argc;
 
     if (argc) {
@@ -511,7 +704,33 @@ PHP_METHOD(MessageQueue, getState)
     pthread_mutex_unlock(&message_queue->mqi->lock);
 }
 
+ZEND_BEGIN_ARG_INFO_EX(HashTable_lock_arginfo, 0, 0, 0)
+ZEND_END_ARG_INFO()
 
+PHP_METHOD(HashTable, lock)
+{
+    hashtable_obj_t *hto = (hashtable_obj_t *)((char *)Z_OBJ(EX(This)) - Z_OBJ(EX(This))->handlers->offset);
+
+    if (zend_parse_parameters_none() != SUCCESS) {
+        return;
+    }
+
+    pthread_mutex_lock(&hto->htoi->lock);
+}
+
+ZEND_BEGIN_ARG_INFO_EX(HashTable_unlock_arginfo, 0, 0, 0)
+ZEND_END_ARG_INFO()
+
+PHP_METHOD(HashTable, unlock)
+{
+    hashtable_obj_t *hto = (hashtable_obj_t *)((char *)Z_OBJ(EX(This)) - Z_OBJ(EX(This))->handlers->offset);
+
+    if (zend_parse_parameters_none() != SUCCESS) {
+        return;
+    }
+
+    pthread_mutex_unlock(&hto->htoi->lock);
+}
 
 zend_function_entry Threaded_methods[] = {
     PHP_ABSTRACT_ME(Threaded, run, Threaded_run_arginfo)
@@ -535,14 +754,26 @@ zend_function_entry MessageQueue_methods[] = {
     PHP_FE_END
 };
 
-zval *mqh_read_property_handle(zval *object, zval *member, int type, void **cache, zval *rv)
+zend_function_entry HashTable_methods[] = {
+    PHP_ME(HashTable, lock, HashTable_lock_arginfo, ZEND_ACC_PUBLIC)
+    PHP_ME(HashTable, unlock, HashTable_unlock_arginfo, ZEND_ACC_PUBLIC)
+    // make countable
+    // PHP_ME(HashTable, push, MessageQueue_push_arginfo, ZEND_ACC_PUBLIC)
+    // PHP_ME(HashTable, pop, MessageQueue_pop_arginfo, ZEND_ACC_PUBLIC)
+    // PHP_ME(HashTable, hasMessages, MessageQueue_has_messages_arginfo, ZEND_ACC_PUBLIC)
+    // PHP_ME(HashTable, setState, MessageQueue_set_state_arginfo, ZEND_ACC_PUBLIC)
+    // PHP_ME(HashTable, getState, MessageQueue_get_state_arginfo, ZEND_ACC_PUBLIC)
+    PHP_FE_END
+};
+
+zval *read_property_handle(zval *object, zval *member, int type, void **cache, zval *rv)
 {
     zend_throw_exception(zend_ce_exception, "Properties on MessageQueue objects are not enabled", 0);
 
     return &EG(uninitialized_zval);
 }
 
-void mqh_write_property_handle(zval *object, zval *member, zval *value, void **cache_slot)
+void write_property_handle(zval *object, zval *member, zval *value, void **cache_slot)
 {
     zend_throw_exception(zend_ce_exception, "Properties on MessageQueue objects are not enabled", 0);
 }
@@ -572,8 +803,27 @@ PHP_MINIT_FUNCTION(pht)
 
     message_queue_handlers.offset = XtOffsetOf(message_queue_t, obj);
     message_queue_handlers.free_obj = mqh_free_obj;
-    message_queue_handlers.read_property = mqh_read_property_handle;
-    message_queue_handlers.write_property = mqh_write_property_handle;
+    message_queue_handlers.read_property = read_property_handle;
+    message_queue_handlers.write_property = write_property_handle;
+
+    INIT_CLASS_ENTRY(ce, "HashTable", HashTable_methods);
+    HashTable_ce = zend_register_internal_class(&ce);
+    HashTable_ce->create_object = hash_table_ctor;
+
+    memcpy(&hash_table_handlers, zh, sizeof(zend_object_handlers));
+
+    hash_table_handlers.offset = XtOffsetOf(hashtable_obj_t, obj);
+    hash_table_handlers.dtor_obj = htoh_dtor_object;
+    hash_table_handlers.free_obj = htoh_free_obj;
+    hash_table_handlers.read_property = read_property_handle;
+    hash_table_handlers.write_property = write_property_handle;
+    hash_table_handlers.read_dimension = read_dimension_handle;
+	hash_table_handlers.write_dimension = write_dimension_handle;
+    hash_table_handlers.get_debug_info = get_debug_info_handle;
+    hash_table_handlers.count_elements = count_elements_handle;
+    hash_table_handlers.get_properties = get_properties_handle;
+	// hash_table_handlers.has_dimension = has_dimension_handle;
+	// hash_table_handlers.unset_dimension = unset_dimension_handle;
 
     threads.size = 16;
     threads.used = 0;
@@ -597,6 +847,7 @@ PHP_RINIT_FUNCTION(pht)
 
     zend_hash_init(&PHT_ZG(interned_strings), 8, NULL, ZVAL_PTR_DTOR, 0);
     PHT_ZG(skip_mqi_creation) = 0;
+    PHT_ZG(skip_htoi_creation) = 0;
     // main_thread.id = (ulong) pthread_self();
     // main_thread.ls = TSRMLS_CACHE;
 
