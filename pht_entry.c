@@ -96,7 +96,7 @@ void pht_convert_entry_to_zval(zval *value, entry_t *e)
         case PHT_QUEUE:
             {
                 zend_string *ce_name = zend_string_init("Queue", sizeof("Queue") - 1, 0);
-                zend_class_entry *ce = zend_fetch_class_by_name(ce_name, NULL, ZEND_FETCH_CLASS_DEFAULT | ZEND_FETCH_CLASS_EXCEPTION);
+                zend_class_entry *ce = zend_lookup_class(ce_name);
                 zval zobj;
 
                 PHT_ZG(skip_qoi_creation) = 1;
@@ -109,10 +109,9 @@ void pht_convert_entry_to_zval(zval *value, entry_t *e)
 
                 PHT_ZG(skip_qoi_creation) = 0;
 
-                queue_obj_t *old_qo = (queue_obj_t *)((char *)&ENTRY_Q(e)->obj - ENTRY_Q(e)->obj.handlers->offset);
                 queue_obj_t *new_qo = (queue_obj_t *)((char *)Z_OBJ(zobj) - Z_OBJ(zobj)->handlers->offset);
 
-                new_qo->qoi = old_qo->qoi;
+                new_qo->qoi = ENTRY_Q(e)->qoi;
 
                 zend_string_free(ce_name);
 
@@ -122,7 +121,7 @@ void pht_convert_entry_to_zval(zval *value, entry_t *e)
         case PHT_HASH_TABLE:
             {
                 zend_string *ce_name = zend_string_init("HashTable", sizeof("HashTable") - 1, 0);
-                zend_class_entry *ce = zend_fetch_class_by_name(ce_name, NULL, ZEND_FETCH_CLASS_DEFAULT | ZEND_FETCH_CLASS_EXCEPTION);
+                zend_class_entry *ce = zend_lookup_class(ce_name);
                 zval zobj;
 
                 PHT_ZG(skip_htoi_creation) = 1;
@@ -135,10 +134,9 @@ void pht_convert_entry_to_zval(zval *value, entry_t *e)
 
                 PHT_ZG(skip_htoi_creation) = 0;
 
-                hashtable_obj_t *old_hto = (hashtable_obj_t *)((char *)&ENTRY_HT(e)->obj - ENTRY_HT(e)->obj.handlers->offset);
                 hashtable_obj_t *new_hto = (hashtable_obj_t *)((char *)Z_OBJ(zobj) - Z_OBJ(zobj)->handlers->offset);
 
-                new_hto->htoi = old_hto->htoi;
+                new_hto->htoi = ENTRY_HT(e)->htoi;
 
                 zend_string_free(ce_name);
 
