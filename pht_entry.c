@@ -179,6 +179,8 @@ void pht_convert_zval_to_entry(entry_t *e, zval *value)
         case _IS_BOOL:
             ENTRY_BOOL(e) = !!Z_LVAL_P(value);
             break;
+        case IS_NULL:
+            break;
         case IS_ARRAY:
             {
                 smart_str smart = {0};

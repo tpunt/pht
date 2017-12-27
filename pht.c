@@ -477,6 +477,48 @@ HashTable *hto_get_properties(zval *zobj)
     return zht;
 }
 
+int hto_has_dimension(zval *zobj, zval *offset, int check_empty)
+{
+    zend_object *obj = Z_OBJ_P(zobj);
+    hashtable_obj_t *hto = (hashtable_obj_t *)((char *)obj - obj->handlers->offset);
+    entry_t *entry = NULL;
+
+    switch (Z_TYPE_P(offset)) {
+        case IS_STRING:
+            {
+                pht_string_t key;
+
+                pht_str_update(&key, Z_STRVAL_P(offset), Z_STRLEN_P(offset));
+                entry = pht_hashtable_search(&hto->htoi->hashtable, &key);
+                pht_str_free(&key);
+            }
+            break;
+        case IS_LONG:
+            entry = pht_hashtable_search_ind(&hto->htoi->hashtable, Z_LVAL_P(offset));
+            break;
+        default:
+            zend_throw_error(NULL, "Invalid offset type"); // @todo cater for Object::__toString()?
+            return 0;
+    }
+
+    if (!entry) {
+        return 0;
+    }
+
+    if (!check_empty) {
+        return ENTRY_TYPE(entry) != IS_NULL;
+    }
+
+    zval value;
+    int result;
+
+    pht_convert_entry_to_zval(&value, entry);
+    result = i_zend_is_true(&value);
+    zval_ptr_dtor(&value);
+
+    return result;
+}
+
 HashTable *qo_get_properties(zval *zobj)
 {
     zend_object *obj = Z_OBJ_P(zobj);
@@ -834,7 +876,7 @@ PHP_MINIT_FUNCTION(pht)
     hash_table_handlers.get_debug_info = hto_get_debug_info;
     hash_table_handlers.count_elements = hto_count_elements;
     hash_table_handlers.get_properties = hto_get_properties;
-    // hash_table_handlers.has_dimension = has_dimension_handle;
+    hash_table_handlers.has_dimension = hto_has_dimension;
     // hash_table_handlers.unset_dimension = unset_dimension_handle;
 
     threads.size = 16;

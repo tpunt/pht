@@ -18,8 +18,9 @@ class Test implements Threaded
         $this->ht->lock();
         for ($i = 0; $i < 2; ++$i) {
             $this->ht[$this->str] = 'def';
-            $this->ht[0] = 'defg';
-            $this->ht[1] = 'defg';
+            $this->ht[0] = 0;
+            $this->ht[1] = null;
+            $this->ht[2] = 1;
         }
         $this->ht->unlock();
     }
@@ -33,7 +34,7 @@ $thread->start();
 
 while (true) {
     $ht->lock();
-    if (count($ht) === 3) {
+    if (count($ht) === 4) {
         $ht->unlock();
         break;
     }
@@ -46,19 +47,33 @@ var_dump($ht['abc']);
 foreach ($ht as $key => $val) {
     var_dump("$key => $val");
 }
+var_dump(isset($ht['abc']), isset($ht['def']), isset($ht[0]), isset($ht[1]));
+var_dump(empty($ht['abc']), empty($ht['def']), empty($ht[0]), empty($ht[1]), empty($ht[2]));
 $ht->unlock();
 
 $thread->join();
 --EXPECT--
-object(HashTable)#2 (3) {
+object(HashTable)#2 (4) {
   [0]=>
-  string(4) "defg"
+  int(0)
   [1]=>
-  string(4) "defg"
+  NULL
+  [2]=>
+  int(1)
   ["abc"]=>
   string(3) "def"
 }
 string(3) "def"
-string(9) "0 => defg"
-string(9) "1 => defg"
+string(6) "0 => 0"
+string(5) "1 => "
+string(6) "2 => 1"
 string(10) "abc => def"
+bool(true)
+bool(false)
+bool(true)
+bool(false)
+bool(false)
+bool(true)
+bool(true)
+bool(true)
+bool(false)
