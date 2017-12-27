@@ -2,29 +2,29 @@
 
 class Task implements Threaded
 {
-    private $mq;
+    private $q;
 
-    public function __construct(MessageQueue $mq)
+    public function __construct(Queue $q)
     {
-        $this->mq = $mq;
+        $this->q = $q;
     }
 
     public function run()
     {
-        $this->mq->push(rand());
+        $this->q->push(rand());
     }
 }
 
 class Pool
 {
     private $poolSize = 0;
-    private $mq = NULL;
+    private $q = NULL;
     private $threads = [];
 
-    public function __construct(int $poolSize, MessageQueue $mq = NULL)
+    public function __construct(int $poolSize, Queue $q = NULL)
     {
         $this->poolSize = $poolSize; // must be > 0
-        $this->mq = $mq;
+        $this->q = $q;
 
         for ($i = 0; $i < $this->poolSize; ++$i) {
             $this->threads[] = new Thread();
@@ -49,19 +49,23 @@ class Pool
     }
 }
 
-$mq = new MessageQueue();
-$pool = new Pool(5, $mq);
+$q = new Queue();
+$pool = new Pool(5, $q);
 $taskCount = 10;
 
 for ($i = 0; $i < $taskCount; ++$i) {
-    $pool->addTask(Task::class, $mq);
+    $pool->addTask(Task::class, $q);
 }
 
 for ($i = 0; $i < $taskCount; ) {
-    if ($mq->pop($message)) {
+    $q->lock();
+
+    if ($q->size()) {
+        var_dump($q->pop());
         ++$i;
-        var_dump($message);
     }
+
+    $q->unlock();
 }
 
 $pool->close();

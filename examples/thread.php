@@ -2,33 +2,39 @@
 
 class Task implements Threaded
 {
-    private $mq;
+    private $q;
 
-    public function __construct(MessageQueue $mq)
+    public function __construct(Queue $q)
     {
-        $this->mq = $mq;
+        $this->q = $q;
     }
 
     public function run()
     {
-        $this->mq->push(rand());
+        $this->q->lock();
+        $this->q->push(rand());
+        $this->q->unlock();
     }
 }
 
-$mq = new MessageQueue();
+$q = new Queue();
 $thread = new Thread();
 $tasksRemaining = 2;
 
-$thread->addTask(Task::class, $mq);
-$thread->addTask(Task::class, $mq);
+$thread->addTask(Task::class, $q);
+$thread->addTask(Task::class, $q);
 
 $thread->start();
 
 while ($tasksRemaining) {
-    if ($mq->pop($message)) {
+    $q->lock();
+
+    if ($q->size()) {
+        var_dump($q->pop());
         --$tasksRemaining;
-        var_dump($message);
     }
+
+    $q->unlock();
 }
 
 $thread->join();

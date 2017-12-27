@@ -1,6 +1,6 @@
 # New Threading POC
 
-This is a POC implementation of a new threading approach. As such, the implementation is very rough (leaky, incomplete) and I've only tested it against PHP 7.2. Everything and anything is subject to change still.
+This is a POC implementation for a new approach to threading in PHP. As such, the implementation is very rough (leaky and incomplete) and I've only tested it against PHP 7.2. Everything and anything is subject to change still.
 
 The basic idea is that `Threaded` objects are abstracted away behind references to such objects. This means that when we would like to create a new thread, we now do something such as:
 ```php
@@ -19,44 +19,57 @@ $thread->addTask(SomeClass::class);
 
 By taking this approach, `Threaded` objects themselves no longer require their properties to be serialised. This is because we no longer need to pass around `Threaded` objects anymore, and so `Threaded` objects no longer need to be able to operate in multiple execution contexts.
 
-This introduces a new problem: how can inter-thread communication be performed? To solve this problem, I decided to make threads "process-like" in terms of their communication between each another. The inter-process communication (IPC) technique I have decided to implement so far is message queues. Message queues are mutex-controlled queues that can be passed around between threads, enabling for a producer-consumer communication style.
+This introduces a new problem: how can inter-thread communication (ITC) be performed? To solve this problem, I initially looked at a few inter-process communication (IPC) techniques. I first tried messages queues for ITC (with mutex locks hidden away internally), however after some playing around with it, the limited communication style of using queues only seemed inconvenient. Because I still liked the idea of using an explicit data structure for ITC (but simply wanted more flexibility with ITC data passing), I decided to implement other data structures and expose their mutex locks to the programmer for better control. Whilst this move increased complexity for the programmer, it also drastically increased the flexibility of what could be done by the programmer when using threads (which was what the overall aim of this extension was).
 
-In code, this looks like the following:
+The following data structures have been implemented so far:
+ - Queue (e.g. for a producer-consumer approach)
+ - Hash table (e.g. for data tracking)
+
+These data structures can be passed around between threads safely, and manipulated by multiple threads using the mutex locks that have been packed in with the data structure.
+
+For example, a `Queue` may be used as follows:
 ```php
 <?php
 
 class Task implements Threaded
 {
-    private $mq;
+    private $queue;
 
-    public function __construct(MessageQueue $mq)
+    public function __construct(Queue $queue)
     {
-        $this->mq = $mq;
+        $this->queue = $queue;
     }
 
     public function run()
     {
-        $this->mq->push(1);
-        $this->mq->finish();
+        $this->queue->lock();
+        $this->queue->push(1);
+        $this->queue->unlock();
     }
 }
 
-$mq = new MessageQueue();
+$queue = new Queue();
 $thread = new Thread();
+$expectedResultCount = 1;
 
 $thread->start();
-$thread->addTask(Task::class, $mq);
+$thread->addTask(Task::class, $queue);
 
-while (!$mq->isFinished() || $mq->hasMessages()) {
-    if ($mq->pop($message)) {
-        var_dump($message);
+while ($expectedResultCount) {
+    $queue->lock();
+
+    if ($queue->size()) {
+        var_dump($queue->pop());
+        --$expectedResultCount;
     }
+
+    $queue->unlock();
 }
 
 $thread->join();
 ```
 
-So now, only message queues need to be safely passed around.
+So with this approach to thread, only the given built-in data structures need to be safely passed around.
 
 See also the [examples](https://github.com/tpunt/pht/tree/master/examples) folder.
 
@@ -69,13 +82,19 @@ interface Threaded
     public function run() void;
 }
 
-class MessageQueue
+class Queue
 {
-    public function push(mixed $message) : void;
-    public function pop(mixed &$message) : bool;
-    public function hasMessages(void) : bool;
-    public function getState(void) : void;
-    public function setState(void) : bool;
+    public function push(mixed $value) : void;
+    public function pop(void) : mixed;
+    public function lock(void) : void;
+    public function unlock(void) : void;
+    public function size(void) : bool;
+}
+
+class HashTable
+{
+    public function lock(void) : void;
+    public function unlock(void) : void;
 }
 
 class Thread
@@ -99,53 +118,56 @@ interface Threaded
 }
 ```
 
-`MessageQueue` class is reference-counted across threads, and so it does not
-need to be explicitly destroyed. It looks as follows:
+`Queue` class is reference-counted across threads, and so it does not need to be explicitly destroyed. It looks as follows:
 ```php
-class MessageQueue
+class Queue
 {
     /*
-     * Pushes a message to the queue.
+     * Pushes a value to the queue.
      */
-    public function push(mixed $message) : void;
+    public function push(mixed $value) : void;
 
     /*
      * Pops a value from the queue.
-     *
-     * By using a boolean return value to denote whether a value was popped from
-     * the queue or not, with a reference-based parameter to update on success,
-     * we avoid having to expose a mutex lock to PHP developers. Otherwise, the
-     * following would need to be performed: acquire a lock, check for presence
-     * of messages, pop a message if present, release lock. So this approach
-     * hides away the need for mutexes.
      */
-    public function pop(mixed &$message) : bool;
+    public function pop(void) : mixed;
 
     /*
-     * Checks to see if any messages are left in the queue
-     *
-     * This is used to continue fetching messages from a queue even when it has
-     * finished.
+     * Locks the mutex associated with this queue.
      */
-    public function hasMessages(void) : bool;
+    public function lock(void) : void;
 
     /*
-     * Sets an internal state of the message queue.
-     *
-     * This can enable for flags or counters to be implemented on the queue.
+     * Unlocks the mutex associated with this queue.
      */
-    public function setState(int $state) : void;
+    public function unlock(void) : void;
 
     /*
-     * Gets the internal state of the message queue.
+     * Returns the number of values in the queue.
      */
-    public function getState(void) : int;
+    public function size(void) : int;
+}
+```
+
+`HashTable` class is reference-counted across threads, and so it does not need to be explicitly destroyed. It looks as follows:
+```php
+class HashTable
+{
+    /*
+     * Locks the mutex associated with this hash table.
+     */
+    public function lock(void) : void;
+
+    /*
+     * Unlocks the mutex associated with this hash table.
+     */
+    public function unlock(void) : void;
 }
 ```
 
 `Thread` class:
 ```php
-class Thread // previously ThreadRef
+class Thread
 {
     /*
      * Adds a new task to the thread.
@@ -187,6 +209,4 @@ class Thread // previously ThreadRef
 
 With the above in mind, the serialisation points are:
  - The arguments to the `Thread::addTask` function
- - The values pushed to the message queue
-
-In future, I may implement other IPC techniques, too (such as message passing). The need for additional communication techniques will hopefully become clearer in future.
+ - The values placed into the ITC-based data structures
