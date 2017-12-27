@@ -49,6 +49,9 @@ foreach ($ht as $key => $val) {
 }
 var_dump(isset($ht['abc']), isset($ht['def']), isset($ht[0]), isset($ht[1]));
 var_dump(empty($ht['abc']), empty($ht['def']), empty($ht[0]), empty($ht[1]), empty($ht[2]));
+unset($ht['abc']);
+var_dump($ht);
+var_dump(isset($ht['abc']));
 $ht->unlock();
 
 $thread->join();
@@ -76,4 +79,13 @@ bool(false)
 bool(true)
 bool(true)
 bool(true)
+bool(false)
+object(HashTable)#2 (3) {
+  [0]=>
+  int(0)
+  [1]=>
+  NULL
+  [2]=>
+  int(1)
+}
 bool(false)
