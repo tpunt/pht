@@ -14,7 +14,7 @@ class Test implements Threaded
 
     public function run()
     {
-        for ($i = 0; $i < 2; ++$i) {
+        for ($i = 0; $i < 4; ++$i) {
             $this->q->lock();
             $this->q->push(1);
             $this->q->unlock();
@@ -40,7 +40,28 @@ for ($i = 0; $i < $expectedEntryCount; ) {
     $q->unlock();
 }
 
+while (true) {
+    $q->lock();
+
+    if ($q->size() === 2) {
+        $q->unlock();
+        break;
+    }
+
+    $q->unlock();
+}
+
+$q->lock();
+var_dump($q);
+$q->unlock();
+
 $thread->join();
 --EXPECT--
 int(1)
 int(1)
+object(Queue)#1 (2) {
+  [0]=>
+  int(1)
+  [1]=>
+  int(1)
+}

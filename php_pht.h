@@ -121,6 +121,7 @@ typedef struct _queue_obj_internal_t {
 
 typedef struct _queue_obj_t {
     queue_obj_internal_t *qoi;
+    zend_ulong vn;
     zend_object obj;
 } queue_obj_t;
 

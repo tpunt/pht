@@ -16,5 +16,6 @@ void queue_init(queue_t *queue);
 void enqueue(queue_t *queue, void *element);
 void *dequeue(queue_t *queue);
 int queue_size(queue_t *queue);
+void pht_queue_to_zend_hashtable(HashTable *zht, queue_t *queue);
 
 #endif

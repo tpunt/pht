@@ -1,5 +1,6 @@
 #include <stdlib.h>
 
+#include "pht_entry.h"
 #include "pht_queue.h"
 
 void queue_init(queue_t *queue)
@@ -50,4 +51,16 @@ void *dequeue(queue_t *queue)
 int queue_size(queue_t *queue)
 {
     return queue->size;
+}
+
+void pht_queue_to_zend_hashtable(HashTable *zht, queue_t *queue)
+{
+    linked_list_t *ll = queue->elements;
+
+    for (int i = 0; ll; ++i, ll = ll->next) {
+        zval value;
+
+        pht_convert_entry_to_zval(&value, ll->element);
+        _zend_hash_index_add(zht, i, &value ZEND_FILE_LINE_CC);
+    }
 }

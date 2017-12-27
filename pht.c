@@ -272,12 +272,14 @@ static zend_object *queue_ctor(zend_class_entry *entry)
     object_properties_init(&qo->obj, entry);
 
     qo->obj.handlers = &queue_handlers;
+    qo->vn = 0;
 
     if (!PHT_ZG(skip_qoi_creation)) {
         queue_obj_internal_t *qoi = calloc(1, sizeof(queue_obj_internal_t));
 
         // qoi->state = 0;
         qoi->refcount = 1;
+        qoi->vn = 0;
         pthread_mutex_init(&qoi->lock, NULL);
 
         qo->qoi = qoi;
@@ -308,6 +310,11 @@ static zend_object *hash_table_ctor(zend_class_entry *entry)
     }
 
     return &hto->obj;
+}
+
+void qo_dtor_obj(zend_object *obj)
+{
+    zend_object_std_dtor(obj);
 }
 
 void qo_free_obj(zend_object *obj)
@@ -466,6 +473,32 @@ HashTable *get_properties_handle(zval *zobj)
 
     obj->properties = zht;
     hto->vn = hto->htoi->vn;
+
+    return zht;
+}
+
+HashTable *qo_get_properties(zval *zobj)
+{
+    zend_object *obj = Z_OBJ_P(zobj);
+    queue_obj_t *qo = (queue_obj_t *)((char *)obj - obj->handlers->offset);
+
+    if (obj->properties && qo->vn == qo->qoi->vn) {
+        return obj->properties;
+    }
+
+    HashTable *zht = emalloc(sizeof(HashTable));
+
+    zend_hash_init(zht, queue_size(&qo->qoi->entries), NULL, ZVAL_PTR_DTOR, 0);
+    pht_queue_to_zend_hashtable(zht, &qo->qoi->entries);
+
+    if (obj->properties) {
+        // @todo safe? Perhaps just wipe HT and insert into it instead?
+        GC_REFCOUNT(obj->properties) = 0;
+        zend_array_destroy(obj->properties);
+    }
+
+    obj->properties = zht;
+    qo->vn = qo->qoi->vn;
 
     return zht;
 }
@@ -779,9 +812,11 @@ PHP_MINIT_FUNCTION(pht)
     memcpy(&queue_handlers, zh, sizeof(zend_object_handlers));
 
     queue_handlers.offset = XtOffsetOf(queue_obj_t, obj);
+    queue_handlers.dtor_obj = qo_dtor_obj;
     queue_handlers.free_obj = qo_free_obj;
     queue_handlers.read_property = qo_read_property;
     queue_handlers.write_property = qo_write_property;
+    queue_handlers.get_properties = qo_get_properties;
 
     INIT_CLASS_ENTRY(ce, "HashTable", HashTable_methods);
     HashTable_ce = zend_register_internal_class(&ce);
