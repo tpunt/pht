@@ -23,7 +23,7 @@
 #include "php_pht.h"
 #include "pht_general.h"
 
-typedef struct _message_queue_t message_queue_t;
+typedef struct _queue_obj_t queue_obj_t;
 typedef struct _hashtable_obj_t hashtable_obj_t;
 
 typedef struct _entry_t {
@@ -34,7 +34,7 @@ typedef struct _entry_t {
         double floating;
         pht_string_t string;
         zend_function *func;
-        message_queue_t *message_queue;
+        queue_obj_t *queue;
         hashtable_obj_t *hash_table;
         // array
         // object
@@ -43,7 +43,7 @@ typedef struct _entry_t {
 
 #define PHT_SERIALISATION_FAILED -1
 #define PHT_STORE_FUNC 100
-#define PHT_MESSAGE_QUEUE 101
+#define PHT_QUEUE 101
 #define PHT_HASH_TABLE 102
 
 #define ENTRY_TYPE(s) (s)->type
@@ -52,7 +52,7 @@ typedef struct _entry_t {
 #define ENTRY_DOUBLE(s) (s)->val.floating
 #define ENTRY_BOOL(s) (s)->val.boolean
 #define ENTRY_FUNC(s) (s)->val.func
-#define ENTRY_MQ(s) (s)->val.message_queue
+#define ENTRY_Q(s) (s)->val.queue
 #define ENTRY_HT(s) (s)->val.hash_table
 
 void pht_convert_entry_to_zval(zval *value, entry_t *s);

@@ -32,12 +32,12 @@
 #include "pht_debug.h"
 
 zend_object_handlers thread_handlers;
-zend_object_handlers message_queue_handlers;
+zend_object_handlers queue_handlers;
 zend_object_handlers hash_table_handlers;
 
 zend_class_entry *Threaded_ce;
 zend_class_entry *Thread_ce;
-zend_class_entry *MessageQueue_ce;
+zend_class_entry *Queue_ce;
 zend_class_entry *HashTable_ce;
 
 thread_t main_thread;
@@ -74,22 +74,18 @@ void thread_destroy(thread_t *thread)
     pthread_mutex_destroy(&thread->lock);
 }
 
-void free_message_queue_internal(message_queue_internal_t *mqi)
+void free_queue_internal(queue_obj_internal_t *qoi)
 {
-    pthread_mutex_destroy(&mqi->lock);
+    pthread_mutex_destroy(&qoi->lock);
 
-    while (mqi->messages) {
-        message_t *next_message = mqi->messages->next;
-
-        // @todo check if object is either another MQ or a HT (its refcount will)
-        // need to be decremented if so.
+    while (qoi->entries.size) {
+        // @todo check if object is either another MQ or a HT (its refcount will
+        // need to be decremented if so).
         // This should go into a specific queue_destroy method.
-        free(mqi->messages->message); // free entry_t @todo, this should use pht_entry_delete_value
-        free(mqi->messages); // free message_t
-        mqi->messages = next_message;
+        pht_entry_delete(dequeue(&qoi->entries));
     }
 
-    free(mqi);
+    free(qoi);
 }
 
 void free_hashtable_internal(hashtable_obj_internal_t *htoi)
@@ -105,16 +101,6 @@ void free_hashtable_internal(hashtable_obj_internal_t *htoi)
     // What if it gets repopulated and then GCed again?
     pht_hashtable_destroy(&htoi->hashtable, pht_entry_delete);
     free(htoi);
-}
-
-message_t *create_new_message(entry_t *entry)
-{
-    message_t *message = malloc(sizeof(message_t));
-
-    message->message = entry;
-    message->next = NULL;
-
-    return message;
 }
 
 void *worker_function(thread_t *thread)
@@ -169,10 +155,10 @@ void *worker_function(thread_t *thread)
 
         /*
         This is done here, rather than in the constructor branch, because if
-        a message queue is passed in as an argument to Thread::addTask, then
+        a HT or queue is passed in as an argument to Thread::addTask, then
         its reference count will be incremented. If no constructor is declared,
         however, then the constructor branch will never be hit, the
-        corresponding message queue object will not be constructed, and so the
+        corresponding HT or queue object will not be constructed, and so the
         reference count will not be decremented again. So we always convert
         serialised entries to their zvals to prevent this issue.
         */
@@ -252,50 +238,6 @@ finish:
     pthread_exit(NULL);
 }
 
-void message_queue_push(message_queue_internal_t *mqi, message_t *message)
-{
-    pthread_mutex_lock(&mqi->lock);
-
-    if (!mqi->messages) {
-        mqi->messages = message;
-    } else {
-        mqi->last_message->next = message;
-    }
-
-    mqi->last_message = message;
-
-    pthread_mutex_unlock(&mqi->lock);
-}
-
-zend_bool message_queue_pop(message_queue_internal_t *mqi, zval *zmessage)
-{
-    message_t *emessage = NULL;
-
-    pthread_mutex_lock(&mqi->lock);
-
-    if (mqi->messages) {
-        emessage = mqi->messages;
-        mqi->messages = mqi->messages->next;
-
-        if (!mqi->messages) {
-            mqi->last_message = NULL;
-        }
-    }
-
-    pthread_mutex_unlock(&mqi->lock);
-
-    if (!emessage) {
-        return 0;
-    }
-
-    zval_ptr_dtor(zmessage);
-    pht_convert_entry_to_zval(zmessage, emessage->message);
-    free(emessage->message);
-    free(emessage);
-
-    return 1;
-}
-
 static zend_object *thread_ctor(zend_class_entry *entry)
 {
     thread_t *thread = ecalloc(1, sizeof(thread_t) + zend_object_properties_size(entry));
@@ -322,26 +264,26 @@ void th_free_obj(zend_object *obj)
     thread_destroy(thread);
 }
 
-static zend_object *message_queue_ctor(zend_class_entry *entry)
+static zend_object *queue_ctor(zend_class_entry *entry)
 {
-    message_queue_t *message_queue = ecalloc(1, sizeof(message_queue_t) + zend_object_properties_size(entry));
+    queue_obj_t *qo = ecalloc(1, sizeof(queue_obj_t) + zend_object_properties_size(entry));
 
-    zend_object_std_init(&message_queue->obj, entry);
-    object_properties_init(&message_queue->obj, entry);
+    zend_object_std_init(&qo->obj, entry);
+    object_properties_init(&qo->obj, entry);
 
-    message_queue->obj.handlers = &message_queue_handlers;
+    qo->obj.handlers = &queue_handlers;
 
-    if (!PHT_ZG(skip_mqi_creation)) {
-        message_queue_internal_t *mqi = calloc(1, sizeof(message_queue_internal_t));
+    if (!PHT_ZG(skip_qoi_creation)) {
+        queue_obj_internal_t *qoi = calloc(1, sizeof(queue_obj_internal_t));
 
-        mqi->state = 0;
-        mqi->refcount = 1;
-        pthread_mutex_init(&mqi->lock, NULL);
+        // qoi->state = 0;
+        qoi->refcount = 1;
+        pthread_mutex_init(&qoi->lock, NULL);
 
-        message_queue->mqi = mqi;
+        qo->qoi = qoi;
     }
 
-    return &message_queue->obj;
+    return &qo->obj;
 }
 
 static zend_object *hash_table_ctor(zend_class_entry *entry)
@@ -368,16 +310,16 @@ static zend_object *hash_table_ctor(zend_class_entry *entry)
     return &hto->obj;
 }
 
-void mqh_free_obj(zend_object *obj)
+void qo_free_obj(zend_object *obj)
 {
-    message_queue_t *message_queue = (message_queue_t *)((char *)obj - obj->handlers->offset);
+    queue_obj_t *qo = (queue_obj_t *)((char *)obj - obj->handlers->offset);
 
-    pthread_mutex_lock(&message_queue->mqi->lock);
-    --message_queue->mqi->refcount;
-    pthread_mutex_unlock(&message_queue->mqi->lock);
+    pthread_mutex_lock(&qo->qoi->lock);
+    --qo->qoi->refcount;
+    pthread_mutex_unlock(&qo->qoi->lock);
 
-    if (!message_queue->mqi->refcount) {
-        free_message_queue_internal(message_queue->mqi);
+    if (!qo->qoi->refcount) {
+        free_queue_internal(qo->qoi);
     }
 }
 
@@ -617,93 +559,118 @@ PHP_METHOD(Thread, taskCount)
     RETVAL_LONG(thread->tasks.size);
 }
 
-ZEND_BEGIN_ARG_INFO_EX(MessageQueue_push_arginfo, 0, 0, 1)
-    ZEND_ARG_INFO(0, message)
+ZEND_BEGIN_ARG_INFO_EX(Queue_push_arginfo, 0, 0, 1)
+    ZEND_ARG_INFO(0, entry)
 ZEND_END_ARG_INFO()
 
-PHP_METHOD(MessageQueue, push)
+PHP_METHOD(Queue, push)
 {
-    message_queue_t *message_queue = (message_queue_t *)((char *)Z_OBJ(EX(This)) - Z_OBJ(EX(This))->handlers->offset);
-    zval *message;
+    queue_obj_t *qo = (queue_obj_t *)((char *)Z_OBJ(EX(This)) - Z_OBJ(EX(This))->handlers->offset);
+    zval *entry;
 
     ZEND_PARSE_PARAMETERS_START(1, 1)
-        Z_PARAM_ZVAL(message)
+        Z_PARAM_ZVAL(entry)
     ZEND_PARSE_PARAMETERS_END();
 
-    message_queue_push(message_queue->mqi, create_new_message(create_new_entry(message)));
+    enqueue(&qo->qoi->entries, create_new_entry(entry));
 }
 
-ZEND_BEGIN_ARG_INFO_EX(MessageQueue_pop_arginfo, 0, 0, 1)
-    ZEND_ARG_INFO(1, message)
+ZEND_BEGIN_ARG_INFO_EX(Queue_pop_arginfo, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
-PHP_METHOD(MessageQueue, pop)
+PHP_METHOD(Queue, pop)
 {
-    message_queue_t *message_queue = (message_queue_t *)((char *)Z_OBJ(EX(This)) - Z_OBJ(EX(This))->handlers->offset);
-    zval *zmessage;
-
-    ZEND_PARSE_PARAMETERS_START(1, 1)
-        Z_PARAM_ZVAL_DEREF(zmessage)
-    ZEND_PARSE_PARAMETERS_END();
-
-    RETURN_BOOL(message_queue_pop(message_queue->mqi, zmessage));
-}
-
-ZEND_BEGIN_ARG_INFO_EX(MessageQueue_has_messages_arginfo, 0, 0, 0)
-ZEND_END_ARG_INFO()
-
-PHP_METHOD(MessageQueue, hasMessages)
-{
-    message_queue_t *message_queue = (message_queue_t *)((char *)Z_OBJ(EX(This)) - Z_OBJ(EX(This))->handlers->offset);
+    queue_obj_t *qo = (queue_obj_t *)((char *)Z_OBJ(EX(This)) - Z_OBJ(EX(This))->handlers->offset);
 
     if (zend_parse_parameters_none() != SUCCESS) {
         return;
     }
 
-    // @todo I don't think a mutex lock needs to be held for this?
-    // I'm going to hold it anyway for now, and performance check things later
-    pthread_mutex_lock(&message_queue->mqi->lock);
-    RETVAL_BOOL(message_queue->mqi->messages != NULL);
-    pthread_mutex_unlock(&message_queue->mqi->lock);
+    entry_t *entry = dequeue(&qo->qoi->entries);
+    pht_convert_entry_to_zval(return_value, entry);
+    pht_entry_delete(entry);
 }
 
-ZEND_BEGIN_ARG_INFO_EX(MessageQueue_set_state_arginfo, 0, 0, 1)
+// @todo what about count() function? Rebuilding prop table is not good...
+ZEND_BEGIN_ARG_INFO_EX(Queue_size_arginfo, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
-PHP_METHOD(MessageQueue, setState)
+PHP_METHOD(Queue, size)
 {
-    message_queue_t *message_queue = (message_queue_t *)((char *)Z_OBJ(EX(This)) - Z_OBJ(EX(This))->handlers->offset);
-    zend_long state;
-
-    ZEND_PARSE_PARAMETERS_START(1, 1)
-        Z_PARAM_LONG(state)
-    ZEND_PARSE_PARAMETERS_END();
-
-    // @todo I don't think a mutex lock needs to be held for this?
-    // I'm going to hold it anyway for now, and performance check things later
-    pthread_mutex_lock(&message_queue->mqi->lock);
-    message_queue->mqi->state = state;
-    pthread_mutex_unlock(&message_queue->mqi->lock);
-}
-
-ZEND_BEGIN_ARG_INFO_EX(MessageQueue_get_state_arginfo, 0, 0, 0)
-ZEND_END_ARG_INFO()
-
-PHP_METHOD(MessageQueue, getState)
-{
-    message_queue_t *message_queue = (message_queue_t *)((char *)Z_OBJ(EX(This)) - Z_OBJ(EX(This))->handlers->offset);
+    queue_obj_t *qo = (queue_obj_t *)((char *)Z_OBJ(EX(This)) - Z_OBJ(EX(This))->handlers->offset);
 
     if (zend_parse_parameters_none() != SUCCESS) {
         return;
     }
 
-    // @todo I don't think a mutex lock needs to be held for this?
-    // I'm going to hold it anyway for now, and performance check things later
-    // Also, this could probably be just a simple property instead of a method
-    pthread_mutex_lock(&message_queue->mqi->lock);
-    RETVAL_LONG(message_queue->mqi->state);
-    pthread_mutex_unlock(&message_queue->mqi->lock);
+    RETVAL_LONG(queue_size(&qo->qoi->entries));
 }
+
+ZEND_BEGIN_ARG_INFO_EX(Queue_lock_arginfo, 0, 0, 0)
+ZEND_END_ARG_INFO()
+
+PHP_METHOD(Queue, lock)
+{
+    queue_obj_t *qo = (queue_obj_t *)((char *)Z_OBJ(EX(This)) - Z_OBJ(EX(This))->handlers->offset);
+
+    if (zend_parse_parameters_none() != SUCCESS) {
+        return;
+    }
+
+    pthread_mutex_lock(&qo->qoi->lock);
+}
+
+ZEND_BEGIN_ARG_INFO_EX(Queue_unlock_arginfo, 0, 0, 0)
+ZEND_END_ARG_INFO()
+
+PHP_METHOD(Queue, unlock)
+{
+    queue_obj_t *qo = (queue_obj_t *)((char *)Z_OBJ(EX(This)) - Z_OBJ(EX(This))->handlers->offset);
+
+    if (zend_parse_parameters_none() != SUCCESS) {
+        return;
+    }
+
+    pthread_mutex_unlock(&qo->qoi->lock);
+}
+
+// ZEND_BEGIN_ARG_INFO_EX(Queue_set_state_arginfo, 0, 0, 1)
+// ZEND_END_ARG_INFO()
+//
+// PHP_METHOD(Queue, setState)
+// {
+//     queue_obj_t *qo = (queue_obj_t *)((char *)Z_OBJ(EX(This)) - Z_OBJ(EX(This))->handlers->offset);
+//     zend_long state;
+//
+//     ZEND_PARSE_PARAMETERS_START(1, 1)
+//         Z_PARAM_LONG(state)
+//     ZEND_PARSE_PARAMETERS_END();
+//
+//     // @todo I don't think a mutex lock needs to be held for this?
+//     // I'm going to hold it anyway for now, and performance check things later
+//     pthread_mutex_lock(&qo->qoi->lock);
+//     qo->qoi->state = state;
+//     pthread_mutex_unlock(&qo->qoi->lock);
+// }
+
+// ZEND_BEGIN_ARG_INFO_EX(Queue_get_state_arginfo, 0, 0, 0)
+// ZEND_END_ARG_INFO()
+//
+// PHP_METHOD(Queue, getState)
+// {
+//     queue_obj_t *qo = (queue_obj_t *)((char *)Z_OBJ(EX(This)) - Z_OBJ(EX(This))->handlers->offset);
+//
+//     if (zend_parse_parameters_none() != SUCCESS) {
+//         return;
+//     }
+//
+//     // @todo I don't think a mutex lock needs to be held for this?
+//     // I'm going to hold it anyway for now, and performance check things later
+//     // Also, this could probably be just a simple property instead of a method
+//     pthread_mutex_lock(&qo->qoi->lock);
+//     RETVAL_LONG(qo->qoi->state);
+//     pthread_mutex_unlock(&qo->qoi->lock);
+// }
 
 ZEND_BEGIN_ARG_INFO_EX(HashTable_lock_arginfo, 0, 0, 0)
 ZEND_END_ARG_INFO()
@@ -746,12 +713,14 @@ zend_function_entry Thread_methods[] = {
     PHP_FE_END
 };
 
-zend_function_entry MessageQueue_methods[] = {
-    PHP_ME(MessageQueue, push, MessageQueue_push_arginfo, ZEND_ACC_PUBLIC)
-    PHP_ME(MessageQueue, pop, MessageQueue_pop_arginfo, ZEND_ACC_PUBLIC)
-    PHP_ME(MessageQueue, hasMessages, MessageQueue_has_messages_arginfo, ZEND_ACC_PUBLIC)
-    PHP_ME(MessageQueue, setState, MessageQueue_set_state_arginfo, ZEND_ACC_PUBLIC)
-    PHP_ME(MessageQueue, getState, MessageQueue_get_state_arginfo, ZEND_ACC_PUBLIC)
+zend_function_entry Queue_methods[] = {
+    PHP_ME(Queue, push, Queue_push_arginfo, ZEND_ACC_PUBLIC)
+    PHP_ME(Queue, pop, Queue_pop_arginfo, ZEND_ACC_PUBLIC)
+    PHP_ME(Queue, size, Queue_size_arginfo, ZEND_ACC_PUBLIC)
+    PHP_ME(Queue, lock, Queue_lock_arginfo, ZEND_ACC_PUBLIC)
+    PHP_ME(Queue, unlock, Queue_unlock_arginfo, ZEND_ACC_PUBLIC)
+    // PHP_ME(Queue, setState, Queue_set_state_arginfo, ZEND_ACC_PUBLIC)
+    // PHP_ME(Queue, getState, Queue_get_state_arginfo, ZEND_ACC_PUBLIC)
     PHP_FE_END
 };
 
@@ -759,24 +728,31 @@ zend_function_entry HashTable_methods[] = {
     PHP_ME(HashTable, lock, HashTable_lock_arginfo, ZEND_ACC_PUBLIC)
     PHP_ME(HashTable, unlock, HashTable_unlock_arginfo, ZEND_ACC_PUBLIC)
     // make countable
-    // PHP_ME(HashTable, push, MessageQueue_push_arginfo, ZEND_ACC_PUBLIC)
-    // PHP_ME(HashTable, pop, MessageQueue_pop_arginfo, ZEND_ACC_PUBLIC)
-    // PHP_ME(HashTable, hasMessages, MessageQueue_has_messages_arginfo, ZEND_ACC_PUBLIC)
-    // PHP_ME(HashTable, setState, MessageQueue_set_state_arginfo, ZEND_ACC_PUBLIC)
-    // PHP_ME(HashTable, getState, MessageQueue_get_state_arginfo, ZEND_ACC_PUBLIC)
     PHP_FE_END
 };
 
+zval *qo_read_property(zval *object, zval *member, int type, void **cache, zval *rv)
+{
+    zend_throw_exception(zend_ce_exception, "Properties on Queue objects are not enabled", 0);
+
+    return &EG(uninitialized_zval);
+}
+
+void qo_write_property(zval *object, zval *member, zval *value, void **cache_slot)
+{
+    zend_throw_exception(zend_ce_exception, "Properties on Queue objects are not enabled", 0);
+}
+
 zval *read_property_handle(zval *object, zval *member, int type, void **cache, zval *rv)
 {
-    zend_throw_exception(zend_ce_exception, "Properties on MessageQueue objects are not enabled", 0);
+    zend_throw_exception(zend_ce_exception, "Properties on HashTable objects are not enabled", 0);
 
     return &EG(uninitialized_zval);
 }
 
 void write_property_handle(zval *object, zval *member, zval *value, void **cache_slot)
 {
-    zend_throw_exception(zend_ce_exception, "Properties on MessageQueue objects are not enabled", 0);
+    zend_throw_exception(zend_ce_exception, "Properties on HashTable objects are not enabled", 0);
 }
 
 PHP_MINIT_FUNCTION(pht)
@@ -796,16 +772,16 @@ PHP_MINIT_FUNCTION(pht)
     thread_handlers.offset = XtOffsetOf(thread_t, obj);
     thread_handlers.free_obj = th_free_obj;
 
-    INIT_CLASS_ENTRY(ce, "MessageQueue", MessageQueue_methods);
-    MessageQueue_ce = zend_register_internal_class(&ce);
-    MessageQueue_ce->create_object = message_queue_ctor;
+    INIT_CLASS_ENTRY(ce, "Queue", Queue_methods);
+    Queue_ce = zend_register_internal_class(&ce);
+    Queue_ce->create_object = queue_ctor;
 
-    memcpy(&message_queue_handlers, zh, sizeof(zend_object_handlers));
+    memcpy(&queue_handlers, zh, sizeof(zend_object_handlers));
 
-    message_queue_handlers.offset = XtOffsetOf(message_queue_t, obj);
-    message_queue_handlers.free_obj = mqh_free_obj;
-    message_queue_handlers.read_property = read_property_handle;
-    message_queue_handlers.write_property = write_property_handle;
+    queue_handlers.offset = XtOffsetOf(queue_obj_t, obj);
+    queue_handlers.free_obj = qo_free_obj;
+    queue_handlers.read_property = qo_read_property;
+    queue_handlers.write_property = qo_write_property;
 
     INIT_CLASS_ENTRY(ce, "HashTable", HashTable_methods);
     HashTable_ce = zend_register_internal_class(&ce);
@@ -847,7 +823,7 @@ PHP_RINIT_FUNCTION(pht)
     ZEND_TSRMLS_CACHE_UPDATE();
 
     zend_hash_init(&PHT_ZG(interned_strings), 8, NULL, ZVAL_PTR_DTOR, 0);
-    PHT_ZG(skip_mqi_creation) = 0;
+    PHT_ZG(skip_qoi_creation) = 0;
     PHT_ZG(skip_htoi_creation) = 0;
     // main_thread.id = (ulong) pthread_self();
     // main_thread.ls = TSRMLS_CACHE;

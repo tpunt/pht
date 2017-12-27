@@ -46,3 +46,8 @@ void *dequeue(queue_t *queue)
 
     return element;
 }
+
+int queue_size(queue_t *queue)
+{
+    return queue->size;
+}

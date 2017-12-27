@@ -79,7 +79,7 @@ extern zend_module_entry pht_module_entry;
 
 ZEND_BEGIN_MODULE_GLOBALS(pht)
     HashTable interned_strings; // used for op_array file names
-    zend_bool skip_mqi_creation;
+    zend_bool skip_qoi_creation;
     zend_bool skip_htoi_creation;
 ZEND_END_MODULE_GLOBALS(pht)
 
@@ -105,30 +105,24 @@ typedef enum _status_t {
     DESTROYED // JOINED?
 } status_t;
 
-typedef struct _message_t {
-    entry_t *message;
-    struct _message_t *next;
-} message_t;
-
 typedef struct _task_t {
     pht_string_t class_name;
     int class_ctor_argc;
     entry_t *class_ctor_args;
 } task_t;
 
-typedef struct _message_queue_internal_t {
+typedef struct _queue_obj_internal_t {
+    queue_t entries;
     pthread_mutex_t lock;
-    zend_long state;
     uint32_t refcount;
-    // queue_t messages;
-    message_t *messages;
-    message_t *last_message; // prevents traversing all messages when enqueueing
-} message_queue_internal_t;
+    zend_ulong vn;
+    // zend_long state;
+} queue_obj_internal_t;
 
-typedef struct _message_queue_t {
-    message_queue_internal_t *mqi;
+typedef struct _queue_obj_t {
+    queue_obj_internal_t *qoi;
     zend_object obj;
-} message_queue_t;
+} queue_obj_t;
 
 typedef struct _hashtable_obj_internal_t {
     pht_hashtable_t hashtable;
@@ -166,9 +160,7 @@ typedef struct _threads_t {
 } threads_t;
 
 extern thread_t main_thread;
-extern zend_class_entry *MessageQueue_ce;
+extern zend_class_entry *Queue_ce;
 extern zend_class_entry *HashTable_ce;
-
-void free_message_queue_internal(message_queue_internal_t *mqi);
 
 #endif

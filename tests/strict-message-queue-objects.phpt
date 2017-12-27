@@ -1,21 +1,21 @@
 --TEST--
-Be strict on what MessageQueue objects can and cannot do.
+Be strict on what Queue objects can and cannot do.
 --FILE--
 <?php
 
-$mq = new MessageQueue();
+$q = new Queue();
 
 try {
-    $mq->a = 1;
+    $q->a = 1;
 } catch (Exception $e) {
     var_dump($e->getMessage());
 }
 
 try {
-    var_dump($mq->a);
+    var_dump($q->a);
 } catch (Exception $e) {
     var_dump($e->getMessage());
 }
 --EXPECT--
-string(50) "Properties on MessageQueue objects are not enabled"
-string(50) "Properties on MessageQueue objects are not enabled"
+string(43) "Properties on Queue objects are not enabled"
+string(43) "Properties on Queue objects are not enabled"
