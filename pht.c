@@ -29,6 +29,7 @@
 
 #include "php_pht.h"
 #include "pht_copy.h"
+#include "pht_debug.h"
 
 zend_object_handlers thread_handlers;
 zend_object_handlers message_queue_handlers;
