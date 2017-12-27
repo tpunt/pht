@@ -330,12 +330,12 @@ void qo_free_obj(zend_object *obj)
     }
 }
 
-void htoh_dtor_object(zend_object *obj)
+void hto_dtor_obj(zend_object *obj)
 {
     zend_object_std_dtor(obj);
 }
 
-void htoh_free_obj(zend_object *obj)
+void hto_free_obj(zend_object *obj)
 {
     hashtable_obj_t *hto = (hashtable_obj_t *)((char *)obj - obj->handlers->offset);
 
@@ -348,7 +348,7 @@ void htoh_free_obj(zend_object *obj)
     }
 }
 
-zval *read_dimension_handle(zval *zobj, zval *offset, int type, zval *rv)
+zval *hto_read_dimension(zval *zobj, zval *offset, int type, zval *rv)
 {
     if (offset == NULL) {
         zend_throw_error(NULL, "Cannot read an empty offset");
@@ -388,7 +388,7 @@ zval *read_dimension_handle(zval *zobj, zval *offset, int type, zval *rv)
     return rv;
 }
 
-void write_dimension_handle(zval *zobj, zval *offset, zval *value)
+void hto_write_dimension(zval *zobj, zval *offset, zval *value)
 {
     hashtable_obj_t *hto = (hashtable_obj_t *)((char *)Z_OBJ_P(zobj) - Z_OBJ_P(zobj)->handlers->offset);
     entry_t *entry = create_new_entry(value);
@@ -430,7 +430,7 @@ void write_dimension_handle(zval *zobj, zval *offset, zval *value)
     }
 }
 
-HashTable *get_debug_info_handle(zval *zobj, int *is_temp)
+HashTable *hto_get_debug_info(zval *zobj, int *is_temp)
 {
     hashtable_obj_t *hto = (hashtable_obj_t *)((char *)Z_OBJ_P(zobj) - Z_OBJ_P(zobj)->handlers->offset);
     HashTable *zht = emalloc(sizeof(HashTable));
@@ -442,7 +442,7 @@ HashTable *get_debug_info_handle(zval *zobj, int *is_temp)
     return zht;
 }
 
-int count_elements_handle(zval *zobj, zend_long *count)
+int hto_count_elements(zval *zobj, zend_long *count)
 {
     hashtable_obj_t *hto = (hashtable_obj_t *)((char *)Z_OBJ_P(zobj) - Z_OBJ_P(zobj)->handlers->offset);
 
@@ -451,7 +451,7 @@ int count_elements_handle(zval *zobj, zend_long *count)
     return SUCCESS;
 }
 
-HashTable *get_properties_handle(zval *zobj)
+HashTable *hto_get_properties(zval *zobj)
 {
     zend_object *obj = Z_OBJ_P(zobj);
     hashtable_obj_t *hto = (hashtable_obj_t *)((char *)obj - obj->handlers->offset);
@@ -776,14 +776,14 @@ void qo_write_property(zval *object, zval *member, zval *value, void **cache_slo
     zend_throw_exception(zend_ce_exception, "Properties on Queue objects are not enabled", 0);
 }
 
-zval *read_property_handle(zval *object, zval *member, int type, void **cache, zval *rv)
+zval *hto_read_property(zval *object, zval *member, int type, void **cache, zval *rv)
 {
     zend_throw_exception(zend_ce_exception, "Properties on HashTable objects are not enabled", 0);
 
     return &EG(uninitialized_zval);
 }
 
-void write_property_handle(zval *object, zval *member, zval *value, void **cache_slot)
+void hto_write_property(zval *object, zval *member, zval *value, void **cache_slot)
 {
     zend_throw_exception(zend_ce_exception, "Properties on HashTable objects are not enabled", 0);
 }
@@ -825,17 +825,17 @@ PHP_MINIT_FUNCTION(pht)
     memcpy(&hash_table_handlers, zh, sizeof(zend_object_handlers));
 
     hash_table_handlers.offset = XtOffsetOf(hashtable_obj_t, obj);
-    hash_table_handlers.dtor_obj = htoh_dtor_object;
-    hash_table_handlers.free_obj = htoh_free_obj;
-    hash_table_handlers.read_property = read_property_handle;
-    hash_table_handlers.write_property = write_property_handle;
-    hash_table_handlers.read_dimension = read_dimension_handle;
-	hash_table_handlers.write_dimension = write_dimension_handle;
-    hash_table_handlers.get_debug_info = get_debug_info_handle;
-    hash_table_handlers.count_elements = count_elements_handle;
-    hash_table_handlers.get_properties = get_properties_handle;
-	// hash_table_handlers.has_dimension = has_dimension_handle;
-	// hash_table_handlers.unset_dimension = unset_dimension_handle;
+    hash_table_handlers.dtor_obj = hto_dtor_obj;
+    hash_table_handlers.free_obj = hto_free_obj;
+    hash_table_handlers.read_property = hto_read_property;
+    hash_table_handlers.write_property = hto_write_property;
+    hash_table_handlers.read_dimension = hto_read_dimension;
+    hash_table_handlers.write_dimension = hto_write_dimension;
+    hash_table_handlers.get_debug_info = hto_get_debug_info;
+    hash_table_handlers.count_elements = hto_count_elements;
+    hash_table_handlers.get_properties = hto_get_properties;
+    // hash_table_handlers.has_dimension = has_dimension_handle;
+    // hash_table_handlers.unset_dimension = unset_dimension_handle;
 
     threads.size = 16;
     threads.used = 0;
