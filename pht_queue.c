@@ -3,14 +3,14 @@
 #include "pht_entry.h"
 #include "pht_queue.h"
 
-void queue_init(queue_t *queue)
+void queue_init(pht_queue_t *queue)
 {
     queue->elements = NULL;
     queue->last = NULL;
     queue->size = 0;
 }
 
-void enqueue(queue_t *queue, void *element)
+void enqueue(pht_queue_t *queue, void *element)
 {
     linked_list_t *ll = malloc(sizeof(linked_list_t));
 
@@ -27,7 +27,7 @@ void enqueue(queue_t *queue, void *element)
     ++queue->size;
 }
 
-void *dequeue(queue_t *queue)
+void *dequeue(pht_queue_t *queue)
 {
     linked_list_t *ll = NULL;
     void *element = NULL;
@@ -48,12 +48,12 @@ void *dequeue(queue_t *queue)
     return element;
 }
 
-int queue_size(queue_t *queue)
+int queue_size(pht_queue_t *queue)
 {
     return queue->size;
 }
 
-void pht_queue_to_zend_hashtable(HashTable *zht, queue_t *queue)
+void pht_queue_to_zend_hashtable(HashTable *zht, pht_queue_t *queue)
 {
     linked_list_t *ll = queue->elements;
 

@@ -112,7 +112,7 @@ typedef struct _task_t {
 } task_t;
 
 typedef struct _queue_obj_internal_t {
-    queue_t entries;
+    pht_queue_t entries;
     pthread_mutex_t lock;
     uint32_t refcount;
     zend_ulong vn;
@@ -144,7 +144,7 @@ typedef struct _thread_t {
     zend_ulong id; // local storage ID used to fetch local storage data
     pthread_mutex_t lock;
     status_t status;
-    queue_t tasks;
+    pht_queue_t tasks;
     // pht_string_t class_name;
     // int class_ctor_argc;
     // entry_t *class_ctor_args;
