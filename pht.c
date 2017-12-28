@@ -127,7 +127,8 @@ void *worker_function(thread_t *thread)
     }
     pthread_mutex_unlock(&thread->lock);
 
-    while (thread->status != DESTROYED) {
+    // @todo mutex lock?
+    while (thread->status != DESTROYED || thread->tasks.size) {
         task_t *task = dequeue(&thread->tasks);
 
         if (!task) {
