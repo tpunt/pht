@@ -402,7 +402,7 @@ void hto_write_dimension(zval *zobj, zval *offset, zval *value)
     switch (Z_TYPE_P(offset)) {
         case IS_STRING:
             {
-                pht_string_t *key = pht_string_new(Z_STRVAL_P(offset), Z_STRLEN_P(offset));
+                pht_string_t *key = pht_str_new(Z_STRVAL_P(offset), Z_STRLEN_P(offset));
 
                 if (pht_hashtable_search(&hto->htoi->hashtable, key)) {
                     pht_hashtable_update(&hto->htoi->hashtable, key, entry);

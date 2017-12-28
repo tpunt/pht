@@ -3,7 +3,7 @@
 
 #include "pht_general.h"
 
-pht_string_t *pht_string_new(char *s, int len)
+pht_string_t *pht_str_new(char *s, int len)
 {
     pht_string_t *pstr = malloc(sizeof(pht_string_t));
 
