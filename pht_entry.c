@@ -59,6 +59,12 @@ void pht_convert_entry_to_zval(zval *value, entry_t *e)
         case _IS_BOOL:
             ZVAL_BOOL(value, ENTRY_BOOL(e));
             break;
+        case IS_TRUE:
+            ZVAL_TRUE(value);
+            break;
+        case IS_FALSE:
+            ZVAL_FALSE(value);
+            break;
         case IS_NULL:
             ZVAL_NULL(value);
             break;
@@ -178,6 +184,12 @@ void pht_convert_zval_to_entry(entry_t *e, zval *value)
             break;
         case _IS_BOOL:
             ENTRY_BOOL(e) = !!Z_LVAL_P(value);
+            break;
+        case IS_TRUE:
+            ENTRY_BOOL(e) = 1;
+            break;
+        case IS_FALSE:
+            ENTRY_BOOL(e) = 0;
             break;
         case IS_NULL:
             break;
