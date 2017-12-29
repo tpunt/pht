@@ -12,7 +12,7 @@
   | obtain it through the world-wide-web, please send a note to          |
   | license@php.net so we can mail you a copy immediately.               |
   +----------------------------------------------------------------------+
-  | Author:                                                              |
+  | Author: Thomas Punt <tpunt@php.net>                                  |
   +----------------------------------------------------------------------+
 */
 
@@ -20,8 +20,17 @@
 #include "config.h"
 #endif
 
+#include <main/php.h>
+#include <Zend/zend_closures.h>
+#include <Zend/zend_exceptions.h>
+#include <Zend/zend_smart_str.h>
+#include <ext/standard/php_var.h>
+
 #include "php_pht.h"
-#include "pht_copy.h"
+#include "src/pht_entry.h"
+#include "src/pht_copy.h"
+#include "src/classes/queue.h"
+#include "src/classes/hashtable.h"
 
 void pht_entry_delete(void *entry_void)
 {

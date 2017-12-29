@@ -2,7 +2,7 @@
   +----------------------------------------------------------------------+
   | PHP Version 7                                                        |
   +----------------------------------------------------------------------+
-  | Copyright (c) 1997-2016 The PHP Group                                |
+  | Copyright (c) 1997-2017 The PHP Group                                |
   +----------------------------------------------------------------------+
   | This source file is subject to version 3.01 of the PHP license,      |
   | that is bundled with this package in the file LICENSE, and is        |
@@ -12,21 +12,35 @@
   | obtain it through the world-wide-web, please send a note to          |
   | license@php.net so we can mail you a copy immediately.               |
   +----------------------------------------------------------------------+
-  | Author:                                                              |
+  | Author: Thomas Punt <tpunt@php.net>                                  |
   +----------------------------------------------------------------------+
 */
 
-#ifndef PHT_DEBUG_H
-#define PHT_DEBUG_H
+#ifndef PHT_QUEUE_CLASS_H
+#define PHT_QUEUE_CLASS_H
 
-#if 0
-# define pthread_mutex_lock(mut) \
-    printf("A: %s (%s:%d)\n", #mut, __FILE__, __LINE__); \
-    pthread_mutex_lock(mut);
+#include <main/php.h>
+#include <stdint.h>
+#include <pthread.h>
 
-# define pthread_mutex_unlock(mut) \
-    printf("R: %s (%s:%d)\n", #mut, __FILE__, __LINE__); \
-    pthread_mutex_unlock(mut);
-#endif
+#include "src/ds/pht_queue.h"
+
+typedef struct _queue_obj_internal_t {
+    pht_queue_t entries;
+    pthread_mutex_t lock;
+    uint32_t refcount;
+    zend_ulong vn;
+    // zend_long state;
+} queue_obj_internal_t;
+
+typedef struct _queue_obj_t {
+    queue_obj_internal_t *qoi;
+    zend_ulong vn;
+    zend_object obj;
+} queue_obj_t;
+
+void queue_ce_init(void);
+
+extern zend_class_entry *Queue_ce;
 
 #endif

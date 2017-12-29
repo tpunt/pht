@@ -12,7 +12,7 @@
   | obtain it through the world-wide-web, please send a note to          |
   | license@php.net so we can mail you a copy immediately.               |
   +----------------------------------------------------------------------+
-  | Author:                                                              |
+  | Author: Thomas Punt <tpunt@php.net>                                  |
   +----------------------------------------------------------------------+
 */
 
@@ -20,11 +20,10 @@
 #define PHT_ENTRY_H
 
 #include "Zend/zend.h"
-#include "php_pht.h"
-#include "pht_general.h"
 
-typedef struct _queue_obj_t queue_obj_t;
-typedef struct _hashtable_obj_t hashtable_obj_t;
+#include "src/pht_general.h"
+#include "src/classes/queue.h"
+#include "src/classes/hashtable.h"
 
 typedef struct _entry_t {
     int type;

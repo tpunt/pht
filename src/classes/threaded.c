@@ -12,26 +12,30 @@
   | obtain it through the world-wide-web, please send a note to          |
   | license@php.net so we can mail you a copy immediately.               |
   +----------------------------------------------------------------------+
-  | Author:                                                              |
+  | Author: Thomas Punt <tpunt@php.net>                                  |
   +----------------------------------------------------------------------+
 */
 
-#ifndef PHT_GENERAL_H
-#define PHT_GENERAL_H
+#include <main/php.h>
+#include <Zend/zend_API.h>
 
-#define PHT_STRL(s) (s).len
-#define PHT_STRV(s) (s).val
-#define PHT_STRL_P(s) PHT_STRL(*(s))
-#define PHT_STRV_P(s) PHT_STRV(*(s))
+#include "src/classes/threaded.h"
 
-typedef struct _pht_string_t {
-    int len;
-    char *val;
-} pht_string_t;
+zend_class_entry *Threaded_ce;
 
-pht_string_t *pht_str_new(char *s, int len);
-void pht_str_update(pht_string_t *str, char *s, int len);
-int pht_str_eq(pht_string_t *phtstr1, pht_string_t *phtstr2);
-void pht_str_free(pht_string_t *str);
+ZEND_BEGIN_ARG_INFO_EX(Threaded_run_arginfo, 0, 0, 0)
+ZEND_END_ARG_INFO()
 
-#endif
+zend_function_entry Threaded_methods[] = {
+    PHP_ABSTRACT_ME(Threaded, run, Threaded_run_arginfo)
+    PHP_FE_END
+};
+
+void threaded_ce_init(void)
+{
+    zend_class_entry ce;
+    zend_object_handlers *zh = zend_get_std_object_handlers();
+
+    INIT_CLASS_ENTRY(ce, "Threaded", Threaded_methods);
+    Threaded_ce = zend_register_internal_interface(&ce);
+}

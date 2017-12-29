@@ -12,15 +12,15 @@
   | obtain it through the world-wide-web, please send a note to          |
   | license@php.net so we can mail you a copy immediately.               |
   +----------------------------------------------------------------------+
-  | Author:                                                              |
+  | Author: Thomas Punt <tpunt@php.net>                                  |
   +----------------------------------------------------------------------+
 */
 
 #include <stdlib.h>
 #include <string.h>
 
-#include "pht_entry.h"
-#include "pht_hashtable.h"
+#include "src/pht_entry.h"
+#include "src/ds/pht_hashtable.h"
 
 static void *pht_hashtable_search_direct(pht_hashtable_t *ht, pht_string_t *key, int hash);
 static pht_string_t *pht_hashtable_key_fetch_direct(pht_hashtable_t *ht, pht_string_t *key, int hash);

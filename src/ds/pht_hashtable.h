@@ -12,12 +12,16 @@
   | obtain it through the world-wide-web, please send a note to          |
   | license@php.net so we can mail you a copy immediately.               |
   +----------------------------------------------------------------------+
-  | Author:                                                              |
+  | Author: Thomas Punt <tpunt@php.net>                                  |
   +----------------------------------------------------------------------+
 */
 
 #ifndef PHT_HASHTABLE_H
 #define PHT_HASHTABLE_H
+
+#include <Zend/zend_types.h>
+
+#include "src/pht_general.h"
 
 // hash table flags
 #define FREE_KEYS 1

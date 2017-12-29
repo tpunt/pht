@@ -12,7 +12,7 @@
   | obtain it through the world-wide-web, please send a note to          |
   | license@php.net so we can mail you a copy immediately.               |
   +----------------------------------------------------------------------+
-  | Author:                                                              |
+  | Author: Thomas Punt <tpunt@php.net>                                  |
   +----------------------------------------------------------------------+
 */
 
@@ -20,6 +20,7 @@
 #define PHP_PHT_H
 
 #include <Zend/zend_modules.h>
+#include <Zend/zend_API.h>
 
 extern zend_module_entry pht_module_entry;
 #define phpext_pht_ptr &pht_module_entry
@@ -37,45 +38,6 @@ extern zend_module_entry pht_module_entry;
 #ifndef ZTS
 #  error "ZTS is required"
 #endif
-
-#include <main/php.h>
-#include <main/php_globals.h>
-#include <main/php_ini.h>
-#include <main/php_main.h>
-#include <main/php_network.h>
-#include <main/php_ticks.h>
-
-#include <Zend/zend.h>
-#include <Zend/zend_closures.h>
-#include <Zend/zend_compile.h>
-#include <Zend/zend_exceptions.h>
-#include <Zend/zend_extensions.h>
-#include <Zend/zend_globals.h>
-#include <Zend/zend_hash.h>
-#include <Zend/zend_inheritance.h>
-#include <Zend/zend_interfaces.h>
-#include <Zend/zend_list.h>
-#include <Zend/zend_modules.h>
-#include <Zend/zend_object_handlers.h>
-#include <Zend/zend_smart_str.h>
-#include <Zend/zend_ts_hash.h>
-#include <Zend/zend_types.h>
-#include <Zend/zend_variables.h>
-#include <Zend/zend_vm.h>
-
-#include <ext/standard/basic_functions.h>
-#include <ext/standard/info.h>
-#include <ext/standard/php_rand.h>
-#include <ext/standard/php_var.h>
-
-#include "TSRM.h"
-
-#include <pthread.h>
-
-#include "pht_general.h"
-#include "pht_entry.h"
-#include "pht_queue.h"
-#include "pht_hashtable.h"
 
 ZEND_BEGIN_MODULE_GLOBALS(pht)
     HashTable interned_strings; // used for op_array file names
@@ -95,73 +57,5 @@ ZEND_EXTERN_MODULE_GLOBALS(pht)
 #if defined(ZTS) && defined(COMPILE_DL_PHT)
 ZEND_TSRMLS_CACHE_EXTERN()
 #endif
-
-typedef struct _entry_t entry_t;
-
-typedef enum _status_t {
-    UNDER_CONSTRUCTION,
-    ACTIVE,
-    FINISHED,
-    DESTROYED // JOINED?
-} status_t;
-
-typedef struct _task_t {
-    pht_string_t class_name;
-    int class_ctor_argc;
-    entry_t *class_ctor_args;
-} task_t;
-
-typedef struct _queue_obj_internal_t {
-    pht_queue_t entries;
-    pthread_mutex_t lock;
-    uint32_t refcount;
-    zend_ulong vn;
-    // zend_long state;
-} queue_obj_internal_t;
-
-typedef struct _queue_obj_t {
-    queue_obj_internal_t *qoi;
-    zend_ulong vn;
-    zend_object obj;
-} queue_obj_t;
-
-typedef struct _hashtable_obj_internal_t {
-    pht_hashtable_t hashtable;
-    pthread_mutex_t lock;
-    uint32_t refcount;
-    zend_ulong vn;
-} hashtable_obj_internal_t;
-
-typedef struct _hashtable_obj_t {
-    hashtable_obj_internal_t *htoi;
-    zend_ulong vn;
-    zend_object obj;
-} hashtable_obj_t;
-
-typedef struct _thread_t {
-    pthread_t thread; // must be first member
-    int tid; // use thread as global in tls instead?
-    zend_ulong id; // local storage ID used to fetch local storage data
-    pthread_mutex_t lock;
-    status_t status;
-    pht_queue_t tasks;
-    // pht_string_t class_name;
-    // int class_ctor_argc;
-    // entry_t *class_ctor_args;
-    void*** ls; // pointer to local storage in TSRM
-    // zend_object *threaded_object;
-    zend_object obj;
-} thread_t;
-
-typedef struct _threads_t {
-    thread_t **thread_table;
-    int size;
-    int used;
-    pthread_mutex_t lock;
-} threads_t;
-
-extern thread_t main_thread;
-extern zend_class_entry *Queue_ce;
-extern zend_class_entry *HashTable_ce;
 
 #endif
