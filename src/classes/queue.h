@@ -30,7 +30,6 @@ typedef struct _queue_obj_internal_t {
     pthread_mutex_t lock;
     uint32_t refcount;
     zend_ulong vn;
-    // zend_long state;
 } queue_obj_internal_t;
 
 typedef struct _queue_obj_t {

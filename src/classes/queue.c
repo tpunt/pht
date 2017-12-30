@@ -53,7 +53,6 @@ static zend_object *queue_ctor(zend_class_entry *entry)
     if (!PHT_ZG(skip_qoi_creation)) {
         queue_obj_internal_t *qoi = calloc(1, sizeof(queue_obj_internal_t));
 
-        // qoi->state = 0;
         qoi->refcount = 1;
         qoi->vn = 0;
         pthread_mutex_init(&qoi->lock, NULL);
@@ -219,44 +218,6 @@ PHP_METHOD(Queue, unlock)
     pthread_mutex_unlock(&qo->qoi->lock);
 }
 
-// ZEND_BEGIN_ARG_INFO_EX(Queue_set_state_arginfo, 0, 0, 1)
-// ZEND_END_ARG_INFO()
-//
-// PHP_METHOD(Queue, setState)
-// {
-//     queue_obj_t *qo = (queue_obj_t *)((char *)Z_OBJ(EX(This)) - Z_OBJ(EX(This))->handlers->offset);
-//     zend_long state;
-//
-//     ZEND_PARSE_PARAMETERS_START(1, 1)
-//         Z_PARAM_LONG(state)
-//     ZEND_PARSE_PARAMETERS_END();
-//
-//     // @todo I don't think a mutex lock needs to be held for this?
-//     // I'm going to hold it anyway for now, and performance check things later
-//     pthread_mutex_lock(&qo->qoi->lock);
-//     qo->qoi->state = state;
-//     pthread_mutex_unlock(&qo->qoi->lock);
-// }
-
-// ZEND_BEGIN_ARG_INFO_EX(Queue_get_state_arginfo, 0, 0, 0)
-// ZEND_END_ARG_INFO()
-//
-// PHP_METHOD(Queue, getState)
-// {
-//     queue_obj_t *qo = (queue_obj_t *)((char *)Z_OBJ(EX(This)) - Z_OBJ(EX(This))->handlers->offset);
-//
-//     if (zend_parse_parameters_none() != SUCCESS) {
-//         return;
-//     }
-//
-//     // @todo I don't think a mutex lock needs to be held for this?
-//     // I'm going to hold it anyway for now, and performance check things later
-//     // Also, this could probably be just a simple property instead of a method
-//     pthread_mutex_lock(&qo->qoi->lock);
-//     RETVAL_LONG(qo->qoi->state);
-//     pthread_mutex_unlock(&qo->qoi->lock);
-// }
-
 zend_function_entry Queue_methods[] = {
     PHP_ME(Queue, push, Queue_push_arginfo, ZEND_ACC_PUBLIC)
     PHP_ME(Queue, pop, Queue_pop_arginfo, ZEND_ACC_PUBLIC)
@@ -264,8 +225,6 @@ zend_function_entry Queue_methods[] = {
     PHP_ME(Queue, size, Queue_size_arginfo, ZEND_ACC_PUBLIC)
     PHP_ME(Queue, lock, Queue_lock_arginfo, ZEND_ACC_PUBLIC)
     PHP_ME(Queue, unlock, Queue_unlock_arginfo, ZEND_ACC_PUBLIC)
-    // PHP_ME(Queue, setState, Queue_set_state_arginfo, ZEND_ACC_PUBLIC)
-    // PHP_ME(Queue, getState, Queue_get_state_arginfo, ZEND_ACC_PUBLIC)
     PHP_FE_END
 };
 
