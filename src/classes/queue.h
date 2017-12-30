@@ -26,7 +26,7 @@
 #include "src/ds/pht_queue.h"
 
 typedef struct _queue_obj_internal_t {
-    pht_queue_t entries;
+    pht_queue_t queue;
     pthread_mutex_t lock;
     uint32_t refcount;
     zend_ulong vn;
