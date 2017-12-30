@@ -43,6 +43,7 @@ ZEND_BEGIN_MODULE_GLOBALS(pht)
     HashTable interned_strings; // used for op_array file names
     zend_bool skip_qoi_creation;
     zend_bool skip_htoi_creation;
+    zend_bool skip_voi_creation;
 ZEND_END_MODULE_GLOBALS(pht)
 
 ZEND_EXTERN_MODULE_GLOBALS(pht)

@@ -24,6 +24,7 @@
 #include "src/pht_general.h"
 #include "src/classes/queue.h"
 #include "src/classes/hashtable.h"
+#include "src/classes/vector.h"
 
 typedef struct _entry_t {
     int type;
@@ -35,6 +36,7 @@ typedef struct _entry_t {
         zend_function *func;
         queue_obj_t *queue;
         hashtable_obj_t *hash_table;
+        vector_obj_t *vector;
         // array
         // object
     } val;
@@ -44,6 +46,7 @@ typedef struct _entry_t {
 #define PHT_STORE_FUNC 100
 #define PHT_QUEUE 101
 #define PHT_HASH_TABLE 102
+#define PHT_VECTOR 103
 
 #define ENTRY_TYPE(s) (s)->type
 #define ENTRY_STRING(s) (s)->val.string
@@ -53,6 +56,7 @@ typedef struct _entry_t {
 #define ENTRY_FUNC(s) (s)->val.func
 #define ENTRY_Q(s) (s)->val.queue
 #define ENTRY_HT(s) (s)->val.hash_table
+#define ENTRY_V(s) (s)->val.vector
 
 void pht_convert_entry_to_zval(zval *value, entry_t *s);
 void pht_convert_zval_to_entry(entry_t *e, zval *value);

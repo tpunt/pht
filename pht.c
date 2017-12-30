@@ -28,6 +28,7 @@
 #include "src/classes/threaded.h"
 #include "src/classes/queue.h"
 #include "src/classes/hashtable.h"
+#include "src/classes/vector.h"
 
 ZEND_DECLARE_MODULE_GLOBALS(pht)
 
@@ -37,6 +38,7 @@ PHP_MINIT_FUNCTION(pht)
     thread_ce_init();
     queue_ce_init();
     hashtable_ce_init();
+    vector_ce_init();
 
     return SUCCESS;
 }
@@ -55,6 +57,7 @@ PHP_RINIT_FUNCTION(pht)
     zend_hash_init(&PHT_ZG(interned_strings), 8, NULL, ZVAL_PTR_DTOR, 0);
     PHT_ZG(skip_qoi_creation) = 0;
     PHT_ZG(skip_htoi_creation) = 0;
+    PHT_ZG(skip_voi_creation) = 0;
     // main_thread.id = (ulong) pthread_self();
     // main_thread.ls = TSRMLS_CACHE;
 

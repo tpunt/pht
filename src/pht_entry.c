@@ -29,8 +29,6 @@
 #include "php_pht.h"
 #include "src/pht_entry.h"
 #include "src/pht_copy.h"
-#include "src/classes/queue.h"
-#include "src/classes/hashtable.h"
 
 void pht_entry_delete(void *entry_void)
 {
@@ -158,6 +156,31 @@ void pht_convert_entry_to_zval(zval *value, entry_t *e)
                 ZVAL_OBJ(value, Z_OBJ(zobj));
             }
             break;
+        case PHT_VECTOR:
+            {
+                zend_string *ce_name = zend_string_init("Vector", sizeof("Vector") - 1, 0);
+                zend_class_entry *ce = zend_lookup_class(ce_name);
+                zval zobj;
+
+                PHT_ZG(skip_voi_creation) = 1;
+
+                if (object_init_ex(&zobj, ce) != SUCCESS) {
+                    // @todo this will throw an exception in the new thread, rather than at
+                    // the call site - how should it behave?
+                    zend_throw_exception(zend_ce_exception, "Failed to threaded object from Vector class", 0);
+                }
+
+                PHT_ZG(skip_voi_creation) = 0;
+
+                vector_obj_t *new_vo = (vector_obj_t *)((char *)Z_OBJ(zobj) - Z_OBJ(zobj)->handlers->offset);
+
+                new_vo->voi = ENTRY_V(e)->voi;
+
+                zend_string_free(ce_name);
+
+                ZVAL_OBJ(value, Z_OBJ(zobj));
+            }
+            break;
         case IS_OBJECT:
             {
                 size_t buf_len = PHT_STRL(ENTRY_STRING(e));
@@ -250,6 +273,15 @@ void pht_convert_zval_to_entry(entry_t *e, zval *value)
                     pthread_mutex_lock(&hto->htoi->lock);
                     ++hto->htoi->refcount;
                     pthread_mutex_unlock(&hto->htoi->lock);
+                }  else if (instanceof_function(Z_OBJCE_P(value), Vector_ce)) {
+                    vector_obj_t *vo = (vector_obj_t *)((char *)Z_OBJ_P(value) - Z_OBJ_P(value)->handlers->offset);
+
+                    ENTRY_TYPE(e) = PHT_VECTOR;
+                    ENTRY_V(e) = vo;
+
+                    pthread_mutex_lock(&vo->voi->lock);
+                    ++vo->voi->refcount;
+                    pthread_mutex_unlock(&vo->voi->lock);
                 } else {
                     // temporary solution - just serialise it and to the hell with the consequences
                     smart_str smart = {0};
