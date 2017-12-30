@@ -54,7 +54,7 @@ int aquire_thread_id(void)
 
     if (threads.used == threads.size) {
         threads.size <<= 1;
-        threads.thread_table = realloc(threads.thread_table, threads.size);
+        threads.thread_table = realloc(threads.thread_table, threads.size  * sizeof(thread_obj_t *));
     }
 
     int tid = threads.used++;
@@ -334,7 +334,7 @@ void thread_ce_init(void)
 
     threads.size = 16;
     threads.used = 0;
-    threads.thread_table = malloc(threads.size * sizeof(thread_obj_t));
+    threads.thread_table = malloc(threads.size * sizeof(thread_obj_t *));
     pthread_mutex_init(&threads.lock, NULL);
 }
 

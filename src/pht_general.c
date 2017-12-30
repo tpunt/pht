@@ -26,7 +26,7 @@ pht_string_t *pht_str_new(char *s, int len)
     pht_string_t *pstr = malloc(sizeof(pht_string_t));
 
     PHT_STRL_P(pstr) = len;
-    PHT_STRV_P(pstr) = malloc(sizeof(char) * len);
+    PHT_STRV_P(pstr) = malloc(len);
     memcpy(PHT_STRV_P(pstr), s, len);
 
     return pstr;
@@ -35,7 +35,7 @@ pht_string_t *pht_str_new(char *s, int len)
 void pht_str_update(pht_string_t *str, char *s, int len)
 {
     PHT_STRL_P(str) = len;
-    PHT_STRV_P(str) = malloc(sizeof(char) * len);
+    PHT_STRV_P(str) = malloc(len);
     memcpy(PHT_STRV_P(str), s, len);
 }
 

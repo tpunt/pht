@@ -32,7 +32,7 @@ void pht_vector_push(pht_vector_t *vector, pht_entry_t *value)
 {
     if (vector->used == vector->size) {
         vector->size <<= 1;
-        vector->values = realloc(vector->values, vector->size); // @todo success check
+        vector->values = realloc(vector->values, vector->size * sizeof(pht_entry_t *)); // @todo success check
     }
 
     vector->values[vector->used++] = value;
@@ -69,7 +69,7 @@ void pht_vector_unshift(pht_vector_t *vector, pht_entry_t *value)
 {
     if (vector->used == vector->size) {
         vector->size <<= 1;
-        vector->values = realloc(vector->values, vector->size); // @todo success check
+        vector->values = realloc(vector->values, vector->size * sizeof(pht_entry_t *)); // @todo success check
     }
 
     for (int i = vector->used; i; --i) {

@@ -205,7 +205,7 @@ int pht_convert_zval_to_entry(pht_entry_t *e, zval *value)
     switch (Z_TYPE_P(value)) {
         case IS_STRING:
             PHT_STRL(PHT_ENTRY_STRING(e)) = ZSTR_LEN(Z_STR_P(value));
-            PHT_STRV(PHT_ENTRY_STRING(e)) = malloc(sizeof(char) * PHT_STRL(PHT_ENTRY_STRING(e)));
+            PHT_STRV(PHT_ENTRY_STRING(e)) = malloc(PHT_STRL(PHT_ENTRY_STRING(e)));
             memcpy(PHT_STRV(PHT_ENTRY_STRING(e)), ZSTR_VAL(Z_STR_P(value)), sizeof(char) * PHT_STRL(PHT_ENTRY_STRING(e)));
             break;
         case IS_LONG:
