@@ -122,6 +122,7 @@ PHP_METHOD(Queue, push)
     ZEND_PARSE_PARAMETERS_END();
 
     enqueue(&qo->qoi->queue, create_new_entry(entry));
+    ++qo->qoi->vn;
 }
 
 ZEND_BEGIN_ARG_INFO_EX(Queue_pop_arginfo, 0, 0, 0)
@@ -138,6 +139,7 @@ PHP_METHOD(Queue, pop)
     entry_t *entry = dequeue(&qo->qoi->queue);
     pht_convert_entry_to_zval(return_value, entry);
     pht_entry_delete(entry);
+    ++qo->qoi->vn;
 }
 
 // @todo what about count() function? Rebuilding prop table is not good...

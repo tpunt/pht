@@ -56,6 +56,11 @@ var_dump($q);
 $q->unlock();
 
 $thread->join();
+
+$q->pop();
+var_dump($q);
+$q->push(2);
+var_dump($q);
 --EXPECT--
 int(1)
 int(1)
@@ -64,4 +69,14 @@ object(Queue)#1 (2) {
   int(1)
   [1]=>
   int(1)
+}
+object(Queue)#1 (1) {
+  [0]=>
+  int(1)
+}
+object(Queue)#1 (2) {
+  [0]=>
+  int(1)
+  [1]=>
+  int(2)
 }
