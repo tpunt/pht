@@ -61,6 +61,14 @@ $q->pop();
 var_dump($q);
 $q->push(2);
 var_dump($q);
+var_dump($q->front());
+$q->pop();
+$q->pop();
+try {
+    var_dump($q->front());
+} catch (Error $e) {
+    var_dump($e->getMessage());
+}
 --EXPECT--
 int(1)
 int(1)
@@ -80,3 +88,5 @@ object(Queue)#1 (2) {
   [1]=>
   int(2)
 }
+int(1)
+string(49) "Attempted to fetch an element from an empty queue"

@@ -66,6 +66,15 @@ void *pht_queue_pop(pht_queue_t *queue)
     return element;
 }
 
+void *pht_queue_front(pht_queue_t *queue)
+{
+    if (!queue->elements) {
+        return NULL;
+    }
+
+    return queue->elements->element;
+}
+
 int pht_queue_size(pht_queue_t *queue)
 {
     return queue->size;

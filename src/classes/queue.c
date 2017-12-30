@@ -149,6 +149,27 @@ PHP_METHOD(Queue, pop)
     ++qo->qoi->vn;
 }
 
+ZEND_BEGIN_ARG_INFO_EX(Queue_front_arginfo, 0, 0, 0)
+ZEND_END_ARG_INFO()
+
+PHP_METHOD(Queue, front)
+{
+    queue_obj_t *qo = (queue_obj_t *)((char *)Z_OBJ(EX(This)) - Z_OBJ(EX(This))->handlers->offset);
+
+    if (zend_parse_parameters_none() != SUCCESS) {
+        return;
+    }
+
+    pht_entry_t *entry = pht_queue_front(&qo->qoi->queue);
+
+    if (!entry) {
+        zend_throw_error(NULL, "Attempted to fetch an element from an empty queue");
+        return;
+    }
+
+    pht_convert_entry_to_zval(return_value, entry);
+}
+
 // @todo what about count() function? Rebuilding prop table is not good...
 ZEND_BEGIN_ARG_INFO_EX(Queue_size_arginfo, 0, 0, 0)
 ZEND_END_ARG_INFO()
@@ -233,6 +254,7 @@ PHP_METHOD(Queue, unlock)
 zend_function_entry Queue_methods[] = {
     PHP_ME(Queue, push, Queue_push_arginfo, ZEND_ACC_PUBLIC)
     PHP_ME(Queue, pop, Queue_pop_arginfo, ZEND_ACC_PUBLIC)
+    PHP_ME(Queue, front, Queue_front_arginfo, ZEND_ACC_PUBLIC)
     PHP_ME(Queue, size, Queue_size_arginfo, ZEND_ACC_PUBLIC)
     PHP_ME(Queue, lock, Queue_lock_arginfo, ZEND_ACC_PUBLIC)
     PHP_ME(Queue, unlock, Queue_unlock_arginfo, ZEND_ACC_PUBLIC)
