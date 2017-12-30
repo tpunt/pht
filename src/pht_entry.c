@@ -198,7 +198,7 @@ void pht_convert_entry_to_zval(zval *value, pht_entry_t *e)
     }
 }
 
-void pht_convert_zval_to_entry(pht_entry_t *e, zval *value)
+int pht_convert_zval_to_entry(pht_entry_t *e, zval *value)
 {
     PHT_ENTRY_TYPE(e) = Z_TYPE_P(value);
 
@@ -236,16 +236,16 @@ void pht_convert_zval_to_entry(pht_entry_t *e, zval *value)
 
                 if (EG(exception)) {
                     smart_str_free(&smart);
-                    PHT_ENTRY_TYPE(e) = PHT_SERIALISATION_FAILED;
-                } else {
-                    zend_string *sval = smart_str_extract(&smart);
-
-                    PHT_STRL(PHT_ENTRY_STRING(e)) = ZSTR_LEN(sval);
-                    PHT_STRV(PHT_ENTRY_STRING(e)) = malloc(ZSTR_LEN(sval));
-                    memcpy(PHT_STRV(PHT_ENTRY_STRING(e)), ZSTR_VAL(sval), ZSTR_LEN(sval));
-
-                    zend_string_free(sval);
+                    return 0;
                 }
+
+                zend_string *sval = smart_str_extract(&smart);
+
+                PHT_STRL(PHT_ENTRY_STRING(e)) = ZSTR_LEN(sval);
+                PHT_STRV(PHT_ENTRY_STRING(e)) = malloc(ZSTR_LEN(sval));
+                memcpy(PHT_STRV(PHT_ENTRY_STRING(e)), ZSTR_VAL(sval), ZSTR_LEN(sval));
+
+                zend_string_free(sval);
             }
             break;
         case IS_OBJECT:
@@ -293,22 +293,24 @@ void pht_convert_zval_to_entry(pht_entry_t *e, zval *value)
 
                     if (EG(exception)) {
                         smart_str_free(&smart);
-                        PHT_ENTRY_TYPE(e) = PHT_SERIALISATION_FAILED;
-                    } else {
-                        zend_string *sval = smart_str_extract(&smart);
-
-                        PHT_STRL(PHT_ENTRY_STRING(e)) = ZSTR_LEN(sval);
-                        PHT_STRV(PHT_ENTRY_STRING(e)) = malloc(ZSTR_LEN(sval));
-                        memcpy(PHT_STRV(PHT_ENTRY_STRING(e)), ZSTR_VAL(sval), ZSTR_LEN(sval));
-
-                        zend_string_free(sval);
+                        return 0;
                     }
+
+                    zend_string *sval = smart_str_extract(&smart);
+
+                    PHT_STRL(PHT_ENTRY_STRING(e)) = ZSTR_LEN(sval);
+                    PHT_STRV(PHT_ENTRY_STRING(e)) = malloc(ZSTR_LEN(sval));
+                    memcpy(PHT_STRV(PHT_ENTRY_STRING(e)), ZSTR_VAL(sval), ZSTR_LEN(sval));
+
+                    zend_string_free(sval);
                 }
             }
             break;
         default:
-            PHT_ENTRY_TYPE(e) = PHT_SERIALISATION_FAILED;
+            return 0;
     }
+
+    return 1;
 }
 
 void pht_entry_update(pht_entry_t *entry, zval *value)
@@ -321,7 +323,11 @@ pht_entry_t *create_new_entry(zval *value)
 {
     pht_entry_t *e = malloc(sizeof(pht_entry_t));
 
-    pht_convert_zval_to_entry(e, value);
+    if (pht_convert_zval_to_entry(e, value)) {
+        return e;
+    }
 
-    return e;
+    free(e);
+
+    return NULL;
 }

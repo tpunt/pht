@@ -115,13 +115,20 @@ ZEND_END_ARG_INFO()
 PHP_METHOD(Queue, push)
 {
     queue_obj_t *qo = (queue_obj_t *)((char *)Z_OBJ(EX(This)) - Z_OBJ(EX(This))->handlers->offset);
-    zval *entry;
+    zval *value;
 
     ZEND_PARSE_PARAMETERS_START(1, 1)
-        Z_PARAM_ZVAL(entry)
+        Z_PARAM_ZVAL(value)
     ZEND_PARSE_PARAMETERS_END();
 
-    pht_queue_push(&qo->qoi->queue, create_new_entry(entry));
+    pht_entry_t *entry = create_new_entry(value);
+
+    if (!entry) {
+        zend_throw_error(NULL, "Failed to serialise the value");
+        return;
+    }
+
+    pht_queue_push(&qo->qoi->queue, entry);
     ++qo->qoi->vn;
 }
 

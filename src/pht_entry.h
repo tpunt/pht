@@ -42,7 +42,6 @@ typedef struct _pht_entry_t {
     } val;
 } pht_entry_t;
 
-#define PHT_SERIALISATION_FAILED -1
 #define PHT_STORE_FUNC 100
 #define PHT_QUEUE 101
 #define PHT_HASH_TABLE 102
@@ -59,7 +58,7 @@ typedef struct _pht_entry_t {
 #define PHT_ENTRY_V(s) (s)->val.vector
 
 void pht_convert_entry_to_zval(zval *value, pht_entry_t *s);
-void pht_convert_zval_to_entry(pht_entry_t *e, zval *value);
+int pht_convert_zval_to_entry(pht_entry_t *e, zval *value);
 void pht_entry_delete(void *entry_void);
 void pht_entry_delete_value(pht_entry_t *entry);
 void pht_entry_update(pht_entry_t *entry, zval *value);

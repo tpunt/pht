@@ -124,9 +124,8 @@ PHP_METHOD(Vector, push)
 
     pht_entry_t *entry = create_new_entry(value);
 
-    if (PHT_ENTRY_TYPE(entry) == PHT_SERIALISATION_FAILED) {
+    if (!entry) {
         zend_throw_error(NULL, "Failed to serialise the value");
-        free(entry);
         return;
     }
 
@@ -193,9 +192,8 @@ PHP_METHOD(Vector, unshift)
 
     pht_entry_t *entry = create_new_entry(value);
 
-    if (PHT_ENTRY_TYPE(entry) == PHT_SERIALISATION_FAILED) {
+    if (!entry) {
         zend_throw_error(NULL, "Failed to serialise the value");
-        free(entry);
         return;
     }
 
