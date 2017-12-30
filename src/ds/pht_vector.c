@@ -80,7 +80,28 @@ void pht_vector_unshift(pht_vector_t *vector, pht_entry_t *value)
     ++vector->used;
 }
 
-int pht_vector_delete(pht_vector_t *vector, zend_long i)
+pht_entry_t *pht_vector_fetch_at(pht_vector_t *vector, zend_long i)
+{
+    if (i < 0 || i >= vector->used) {
+        return NULL;
+    }
+
+    return vector->values[i];
+}
+
+int pht_vector_update_at(pht_vector_t *vector, pht_entry_t *value, zend_long i)
+{
+    if (i < 0 || i >= vector->used) {
+        return 0;
+    }
+
+    pht_entry_delete(vector->values[i]);
+    vector->values[i] = value;
+
+    return 1;
+}
+
+int pht_vector_delete_at(pht_vector_t *vector, zend_long i)
 {
     if (i < 0 || i >= vector->used) {
         return 0;

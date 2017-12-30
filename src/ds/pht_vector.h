@@ -35,7 +35,9 @@ void pht_vector_push(pht_vector_t *vector, pht_entry_t *value);
 pht_entry_t *pht_vector_pop(pht_vector_t *vector);
 pht_entry_t *pht_vector_shift(pht_vector_t *vector);
 void pht_vector_unshift(pht_vector_t *vector, pht_entry_t *value);
-int pht_vector_delete(pht_vector_t *vector, zend_long i);
+pht_entry_t *pht_vector_fetch_at(pht_vector_t *vector, zend_long i);
+int pht_vector_update_at(pht_vector_t *vector, pht_entry_t *value, zend_long i);
+int pht_vector_delete_at(pht_vector_t *vector, zend_long i);
 int pht_vector_size(pht_vector_t *vector);
 void pht_vector_to_zend_hashtable(HashTable *zht, pht_vector_t *vector);
 

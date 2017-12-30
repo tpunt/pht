@@ -83,6 +83,124 @@ void vo_free_obj(zend_object *obj)
     }
 }
 
+zval *vo_read_dimension(zval *zobj, zval *offset, int type, zval *rv)
+{
+    if (offset == NULL) {
+        zend_throw_error(NULL, "Cannot read an empty offset"); // $v[] = 1 ?
+        return NULL;
+    }
+
+    vector_obj_t *vo = (vector_obj_t *)((char *)Z_OBJ_P(zobj) - Z_OBJ_P(zobj)->handlers->offset);
+    pht_entry_t *e = NULL;
+
+    switch (Z_TYPE_P(offset)) {
+        case IS_LONG:
+            e = pht_vector_fetch_at(&vo->voi->vector, Z_LVAL_P(offset));
+            break;
+        default:
+            // @todo cast IS_STRING or IS_DOUBLE to int? cater for Object::__toString()?
+            zend_throw_error(NULL, "Invalid offset type");
+            return NULL;
+    }
+
+    if (!e) {
+        if (type != BP_VAR_IS) {
+            zend_throw_error(NULL, "Undefined offset");
+        }
+        return NULL; // correct?
+    }
+
+    pht_convert_entry_to_zval(rv, e);
+
+    return rv;
+}
+
+void vo_write_dimension(zval *zobj, zval *offset, zval *value)
+{
+    vector_obj_t *vo = (vector_obj_t *)((char *)Z_OBJ_P(zobj) - Z_OBJ_P(zobj)->handlers->offset);
+    pht_entry_t *entry = create_new_entry(value);
+
+    if (!entry) {
+        zend_throw_error(NULL, "Failed to serialise the value");
+        return;
+    }
+
+    if (!offset) {
+        pht_vector_push(&vo->voi->vector, entry);
+        ++vo->voi->vn;
+        return;
+    }
+
+    switch (Z_TYPE_P(offset)) {
+        case IS_LONG:
+            {
+                if (!pht_vector_update_at(&vo->voi->vector, entry, Z_LVAL_P(offset))) {
+                    zend_throw_error(NULL, "Invalid index - the index must be within the array size");
+                    return;
+                }
+
+                ++vo->voi->vn;
+            }
+            break;
+        default:
+            // @todo cast IS_STRING or IS_DOUBLE to int? cater for Object::__toString()?
+            zend_throw_error(NULL, "Invalid offset type");
+            return;
+    }
+}
+
+int vo_has_dimension(zval *zobj, zval *offset, int check_empty)
+{
+    zend_object *obj = Z_OBJ_P(zobj);
+    vector_obj_t *vo = (vector_obj_t *)((char *)obj - obj->handlers->offset);
+    pht_entry_t *entry = NULL;
+
+    switch (Z_TYPE_P(offset)) {
+        case IS_LONG:
+            entry = pht_vector_fetch_at(&vo->voi->vector, Z_LVAL_P(offset));
+            break;
+        default:
+            // @todo cast IS_STRING or IS_DOUBLE to int? cater for Object::__toString()?
+            zend_throw_error(NULL, "Invalid offset type");
+            return 0;
+    }
+
+    if (!entry) {
+        return 0;
+    }
+
+    if (!check_empty) {
+        return PHT_ENTRY_TYPE(entry) != IS_NULL;
+    }
+
+    zval value;
+    int result;
+
+    pht_convert_entry_to_zval(&value, entry);
+    result = i_zend_is_true(&value);
+    zval_ptr_dtor(&value);
+
+    return result;
+}
+
+void vo_unset_dimension(zval *zobj, zval *offset)
+{
+    zend_object *obj = Z_OBJ_P(zobj);
+    vector_obj_t *vo = (vector_obj_t *)((char *)obj - obj->handlers->offset);
+
+    switch (Z_TYPE_P(offset)) {
+        case IS_LONG:
+            if (!pht_vector_delete_at(&vo->voi->vector, Z_LVAL_P(offset))) {
+                zend_throw_error(NULL, "Invalid index - the index must be within the array size");
+                return;
+            }
+            ++vo->voi->vn;
+            break;
+        default:
+            zend_throw_error(NULL, "Invalid offset type"); // @todo cater for Object::__toString()?
+    }
+}
+
 HashTable *vo_get_properties(zval *zobj)
 {
     zend_object *obj = Z_OBJ_P(zobj);
@@ -216,7 +334,7 @@ PHP_METHOD(Vector, delete)
         Z_PARAM_LONG(index)
     ZEND_PARSE_PARAMETERS_END();
 
-    if (!pht_vector_delete(&vo->voi->vector, index)) {
+    if (!pht_vector_delete_at(&vo->voi->vector, index)) {
         zend_throw_error(NULL, "Attempted to delete an element from an out-of-bounds index");
         return;
     }
@@ -306,5 +424,9 @@ void vector_ce_init(void)
     vector_handlers.free_obj = vo_free_obj;
     vector_handlers.read_property = vo_read_property;
     vector_handlers.write_property = vo_write_property;
+    vector_handlers.read_dimension = vo_read_dimension;
+    vector_handlers.write_dimension = vo_write_dimension;
+    vector_handlers.has_dimension = vo_has_dimension;
+    vector_handlers.unset_dimension = vo_unset_dimension;
     vector_handlers.get_properties = vo_get_properties;
 }

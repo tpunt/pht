@@ -67,6 +67,12 @@ try {
 } catch (Error $e) {
     var_dump($e->getMessage());
 }
+$v[] = 0;
+$v[] = 1;
+var_dump($v);
+var_dump(isset($v[1]), isset($v[0]), empty($v[1]), empty($v[0]));
+unset($v[1]);
+var_dump(isset($v[1]), empty($v[1]));
 --EXPECT--
 object(Vector)#1 (2) {
   [0]=>
@@ -87,3 +93,15 @@ object(Vector)#1 (2) {
 string(48) "Attempted to pop an element from an empty vector"
 string(50) "Attempted to shift an element from an empty vector"
 string(58) "Attempted to delete an element from an out-of-bounds index"
+object(Vector)#1 (2) {
+  [0]=>
+  int(0)
+  [1]=>
+  int(1)
+}
+bool(true)
+bool(true)
+bool(false)
+bool(true)
+bool(false)
+bool(true)
