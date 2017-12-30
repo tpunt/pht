@@ -101,6 +101,27 @@ int pht_vector_update_at(pht_vector_t *vector, pht_entry_t *value, zend_long i)
     return 1;
 }
 
+int pht_vector_insert_at(pht_vector_t *vector, pht_entry_t *value, zend_long i)
+{
+    if (i < 0 || i > vector->used) { // can be used like push()
+        return 0;
+    }
+
+    if (vector->used == vector->size) {
+        vector->size <<= 1;
+        vector->values = realloc(vector->values, vector->size * sizeof(pht_entry_t *)); // @todo success check
+    }
+
+    for (int i2 = vector->used; i2 > i; --i2) {
+        vector->values[i2] = vector->values[i2 - 1];
+    }
+
+    vector->values[i] = value;
+    ++vector->used;
+
+    return 1;
+}
+
 int pht_vector_delete_at(pht_vector_t *vector, zend_long i)
 {
     if (i < 0 || i >= vector->used) {

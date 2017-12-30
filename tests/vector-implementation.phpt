@@ -73,6 +73,8 @@ var_dump($v);
 var_dump(isset($v[1]), isset($v[0]), empty($v[1]), empty($v[0]));
 unset($v[1]);
 var_dump(isset($v[1]), empty($v[1]));
+$v->insertAt(2, 0);
+var_dump($v);
 --EXPECT--
 object(Vector)#1 (2) {
   [0]=>
@@ -105,3 +107,9 @@ bool(false)
 bool(true)
 bool(false)
 bool(true)
+object(Vector)#1 (2) {
+  [0]=>
+  int(2)
+  [1]=>
+  int(0)
+}

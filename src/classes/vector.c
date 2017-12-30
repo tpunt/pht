@@ -321,6 +321,37 @@ PHP_METHOD(Vector, unshift)
     ++vo->voi->vn;
 }
 
+ZEND_BEGIN_ARG_INFO_EX(Vector_insert_at_arginfo, 0, 0, 2)
+    ZEND_ARG_INFO(0, value)
+    ZEND_ARG_INFO(0, index)
+ZEND_END_ARG_INFO()
+
+PHP_METHOD(Vector, insertAt)
+{
+    vector_obj_t *vo = (vector_obj_t *)((char *)Z_OBJ(EX(This)) - Z_OBJ(EX(This))->handlers->offset);
+    zval *value;
+    zend_long index;
+
+    ZEND_PARSE_PARAMETERS_START(2, 2)
+        Z_PARAM_ZVAL(value)
+        Z_PARAM_LONG(index)
+    ZEND_PARSE_PARAMETERS_END();
+
+    pht_entry_t *entry = create_new_entry(value);
+
+    if (!entry) {
+        zend_throw_error(NULL, "Failed to serialise the value");
+        return;
+    }
+
+    if (!pht_vector_insert_at(&vo->voi->vector, entry, index)) {
+        zend_throw_error(NULL, "Attempted to insert an element from an out-of-bounds index");
+        return;
+    }
+
+    ++vo->voi->vn;
+}
+
 ZEND_BEGIN_ARG_INFO_EX(Vector_delete_at_arginfo, 0, 0, 1)
     ZEND_ARG_INFO(0, index)
 ZEND_END_ARG_INFO()
@@ -389,6 +420,7 @@ zend_function_entry Vector_methods[] = {
     PHP_ME(Vector, pop, Vector_pop_arginfo, ZEND_ACC_PUBLIC)
     PHP_ME(Vector, shift, Vector_shift_arginfo, ZEND_ACC_PUBLIC)
     PHP_ME(Vector, unshift, Vector_unshift_arginfo, ZEND_ACC_PUBLIC)
+    PHP_ME(Vector, insertAt, Vector_insert_at_arginfo, ZEND_ACC_PUBLIC)
     PHP_ME(Vector, deleteAt, Vector_delete_at_arginfo, ZEND_ACC_PUBLIC)
     PHP_ME(Vector, lock, Vector_lock_arginfo, ZEND_ACC_PUBLIC)
     PHP_ME(Vector, unlock, Vector_unlock_arginfo, ZEND_ACC_PUBLIC)
