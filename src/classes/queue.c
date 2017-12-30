@@ -34,7 +34,7 @@ void free_queue_internal(queue_obj_internal_t *qoi)
         // @todo check if object is either another MQ or a HT (its refcount will
         // need to be decremented if so).
         // This should go into a specific queue_destroy method.
-        pht_entry_delete(dequeue(&qoi->queue));
+        pht_entry_delete(pht_queue_pop(&qoi->queue));
     }
 
     free(qoi);
@@ -93,7 +93,7 @@ HashTable *qo_get_properties(zval *zobj)
 
     HashTable *zht = emalloc(sizeof(HashTable));
 
-    zend_hash_init(zht, queue_size(&qo->qoi->queue), NULL, ZVAL_PTR_DTOR, 0);
+    zend_hash_init(zht, pht_queue_size(&qo->qoi->queue), NULL, ZVAL_PTR_DTOR, 0);
     pht_queue_to_zend_hashtable(zht, &qo->qoi->queue);
 
     if (obj->properties) {
@@ -121,7 +121,7 @@ PHP_METHOD(Queue, push)
         Z_PARAM_ZVAL(entry)
     ZEND_PARSE_PARAMETERS_END();
 
-    enqueue(&qo->qoi->queue, create_new_entry(entry));
+    pht_queue_push(&qo->qoi->queue, create_new_entry(entry));
     ++qo->qoi->vn;
 }
 
@@ -136,7 +136,7 @@ PHP_METHOD(Queue, pop)
         return;
     }
 
-    pht_entry_t *entry = dequeue(&qo->qoi->queue);
+    pht_entry_t *entry = pht_queue_pop(&qo->qoi->queue);
     pht_convert_entry_to_zval(return_value, entry);
     pht_entry_delete(entry);
     ++qo->qoi->vn;
@@ -154,7 +154,7 @@ PHP_METHOD(Queue, size)
         return;
     }
 
-    RETVAL_LONG(queue_size(&qo->qoi->queue));
+    RETVAL_LONG(pht_queue_size(&qo->qoi->queue));
 }
 
 ZEND_BEGIN_ARG_INFO_EX(Queue_lock_arginfo, 0, 0, 0)

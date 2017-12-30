@@ -39,7 +39,7 @@ void thread_init(thread_obj_t *thread, int tid)
 {
     thread->tid = tid;
     thread->status = UNDER_CONSTRUCTION;
-    queue_init(&thread->tasks);
+    pht_queue_init(&thread->tasks);
     pthread_mutex_init(&thread->lock, NULL);
 }
 
@@ -68,7 +68,7 @@ void handle_tasks(thread_obj_t *thread)
 {
     // @todo mutex lock?
     while (thread->status != DESTROYED || thread->tasks.size) {
-        task_t *task = dequeue(&thread->tasks);
+        task_t *task = pht_queue_pop(&thread->tasks);
 
         if (!task) {
             continue;
@@ -260,7 +260,7 @@ PHP_METHOD(Thread, addTask)
         task->class_ctor_args = NULL;
     }
 
-    enqueue(&thread->tasks, task);
+    pht_queue_push(&thread->tasks, task);
 }
 
 ZEND_BEGIN_ARG_INFO_EX(Thread_start_arginfo, 0, 0, 0)

@@ -21,14 +21,14 @@
 #include "src/pht_entry.h"
 #include "src/ds/pht_queue.h"
 
-void queue_init(pht_queue_t *queue)
+void pht_queue_init(pht_queue_t *queue)
 {
     queue->elements = NULL;
     queue->last = NULL;
     queue->size = 0;
 }
 
-void enqueue(pht_queue_t *queue, void *element)
+void pht_queue_push(pht_queue_t *queue, void *element)
 {
     linked_list_t *ll = malloc(sizeof(linked_list_t));
 
@@ -45,7 +45,7 @@ void enqueue(pht_queue_t *queue, void *element)
     ++queue->size;
 }
 
-void *dequeue(pht_queue_t *queue)
+void *pht_queue_pop(pht_queue_t *queue)
 {
     linked_list_t *ll = NULL;
     void *element = NULL;
@@ -66,7 +66,7 @@ void *dequeue(pht_queue_t *queue)
     return element;
 }
 
-int queue_size(pht_queue_t *queue)
+int pht_queue_size(pht_queue_t *queue)
 {
     return queue->size;
 }

@@ -30,10 +30,10 @@ typedef struct _pht_queue_t {
     int size;
 } pht_queue_t;
 
-void queue_init(pht_queue_t *queue);
-void enqueue(pht_queue_t *queue, void *element);
-void *dequeue(pht_queue_t *queue);
-int queue_size(pht_queue_t *queue);
+void pht_queue_init(pht_queue_t *queue);
+void pht_queue_push(pht_queue_t *queue, void *element);
+void *pht_queue_pop(pht_queue_t *queue);
+int pht_queue_size(pht_queue_t *queue);
 void pht_queue_to_zend_hashtable(HashTable *zht, pht_queue_t *queue);
 
 #endif
