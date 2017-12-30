@@ -68,16 +68,16 @@ static void copy_executor_globals(void)
     // symtable_cache_ptr
 
     // symbol_table
-    copy_included_files(&EG(included_files), PHT_EG(main_thread.ls, included_files));
+    copy_included_files(&EG(included_files), PHT_EG(PHT_ZG(parent_thread_ls), included_files));
 
     // bailout
 
     // error_reporting
     // exit_status
 
-    copy_functions(EG(function_table), PHT_EG(main_thread.ls, function_table), NULL);
-    copy_ces(EG(class_table), PHT_CG(main_thread.ls, class_table));
-    copy_global_constants(EG(zend_constants), PHT_EG(main_thread.ls, zend_constants));
+    copy_functions(EG(function_table), PHT_EG(PHT_ZG(parent_thread_ls), function_table), NULL);
+    copy_ces(EG(class_table), PHT_CG(PHT_ZG(parent_thread_ls), class_table));
+    copy_global_constants(EG(zend_constants), PHT_EG(PHT_ZG(parent_thread_ls), zend_constants));
 
     // vm_stack_top
     // vm_stack_end
@@ -121,7 +121,7 @@ static void copy_executor_globals(void)
 
     // lambda_count
 
-    copy_ini_directives(EG(ini_directives), PHT_EG(main_thread.ls, ini_directives));
+    copy_ini_directives(EG(ini_directives), PHT_EG(PHT_ZG(parent_thread_ls), ini_directives));
     // modified_ini_directives
     // error_reporting_ini_entry
 

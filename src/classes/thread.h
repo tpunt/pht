@@ -46,6 +46,7 @@ typedef struct _thread_obj_t {
     status_t status;
     pht_queue_t tasks;
     void*** ls; // pointer to local storage in TSRM
+    void*** parent_thread_ls;
     zend_object obj;
 } thread_obj_t;
 
@@ -55,8 +56,6 @@ typedef struct _threads_t {
     int used;
     pthread_mutex_t lock;
 } threads_t;
-
-extern thread_obj_t main_thread;
 
 void thread_ce_init(void);
 void pht_thread_mshutdown(void);

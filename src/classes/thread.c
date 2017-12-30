@@ -31,14 +31,13 @@ extern zend_class_entry *Threaded_ce;
 
 zend_object_handlers thread_handlers;
 zend_class_entry *Thread_ce;
-
-thread_obj_t main_thread;
 threads_t threads;
 
 void thread_init(thread_obj_t *thread, int tid)
 {
     thread->tid = tid;
     thread->status = UNDER_CONSTRUCTION;
+    thread->parent_thread_ls = TSRMLS_CACHE;
     pht_queue_init(&thread->tasks);
     pthread_mutex_init(&thread->lock, NULL);
 }
@@ -171,7 +170,8 @@ void *worker_function(thread_obj_t *thread)
 
     TSRMLS_CACHE_UPDATE();
 
-    SG(server_context) = PHT_SG(main_thread.ls, server_context);
+    PHT_ZG(parent_thread_ls) = thread->parent_thread_ls;
+    SG(server_context) = PHT_SG(PHT_ZG(parent_thread_ls), server_context);
     SG(sapi_started) = 0;
 
     PG(expose_php) = 0;
@@ -273,9 +273,6 @@ PHP_METHOD(Thread, start)
     if (zend_parse_parameters_none() != SUCCESS) {
         return;
     }
-
-    main_thread.id = (ulong) pthread_self();
-    main_thread.ls = TSRMLS_CACHE;
 
     pthread_create((pthread_t *)thread, NULL, (void *)worker_function, thread);
 }

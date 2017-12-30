@@ -58,8 +58,6 @@ PHP_RINIT_FUNCTION(pht)
     PHT_ZG(skip_qoi_creation) = 0;
     PHT_ZG(skip_htoi_creation) = 0;
     PHT_ZG(skip_voi_creation) = 0;
-    // main_thread.id = (ulong) pthread_self();
-    // main_thread.ls = TSRMLS_CACHE;
 
     return SUCCESS;
 }
