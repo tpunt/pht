@@ -321,11 +321,11 @@ PHP_METHOD(Vector, unshift)
     ++vo->voi->vn;
 }
 
-ZEND_BEGIN_ARG_INFO_EX(Vector_delete_arginfo, 0, 0, 1)
+ZEND_BEGIN_ARG_INFO_EX(Vector_delete_at_arginfo, 0, 0, 1)
     ZEND_ARG_INFO(0, index)
 ZEND_END_ARG_INFO()
 
-PHP_METHOD(Vector, delete)
+PHP_METHOD(Vector, deleteAt)
 {
     vector_obj_t *vo = (vector_obj_t *)((char *)Z_OBJ(EX(This)) - Z_OBJ(EX(This))->handlers->offset);
     zend_long index;
@@ -389,7 +389,7 @@ zend_function_entry Vector_methods[] = {
     PHP_ME(Vector, pop, Vector_pop_arginfo, ZEND_ACC_PUBLIC)
     PHP_ME(Vector, shift, Vector_shift_arginfo, ZEND_ACC_PUBLIC)
     PHP_ME(Vector, unshift, Vector_unshift_arginfo, ZEND_ACC_PUBLIC)
-    PHP_ME(Vector, delete, Vector_delete_arginfo, ZEND_ACC_PUBLIC)
+    PHP_ME(Vector, deleteAt, Vector_delete_at_arginfo, ZEND_ACC_PUBLIC)
     PHP_ME(Vector, lock, Vector_lock_arginfo, ZEND_ACC_PUBLIC)
     PHP_ME(Vector, unlock, Vector_unlock_arginfo, ZEND_ACC_PUBLIC)
     PHP_ME(Vector, size, Vector_size_arginfo, ZEND_ACC_PUBLIC)

@@ -63,7 +63,7 @@ try {
     var_dump($e->getMessage());
 }
 try {
-    var_dump($v->delete(0));
+    var_dump($v->deleteAt(0));
 } catch (Error $e) {
     var_dump($e->getMessage());
 }
