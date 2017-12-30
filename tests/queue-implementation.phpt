@@ -69,6 +69,11 @@ try {
 } catch (Error $e) {
     var_dump($e->getMessage());
 }
+try {
+    var_dump($q->pop());
+} catch (Error $e) {
+    var_dump($e->getMessage());
+}
 --EXPECT--
 int(1)
 int(1)
@@ -90,3 +95,4 @@ object(Queue)#1 (2) {
 }
 int(1)
 string(49) "Attempted to fetch an element from an empty queue"
+string(47) "Attempted to pop an element from an empty queue"

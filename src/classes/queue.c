@@ -144,6 +144,12 @@ PHP_METHOD(Queue, pop)
     }
 
     pht_entry_t *entry = pht_queue_pop(&qo->qoi->queue);
+
+    if (!entry) {
+        zend_throw_error(NULL, "Attempted to pop an element from an empty queue");
+        return;
+    }
+
     pht_convert_entry_to_zval(return_value, entry);
     pht_entry_delete(entry);
     ++qo->qoi->vn;
