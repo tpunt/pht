@@ -136,7 +136,7 @@ PHP_METHOD(Queue, pop)
         return;
     }
 
-    entry_t *entry = dequeue(&qo->qoi->queue);
+    pht_entry_t *entry = dequeue(&qo->qoi->queue);
     pht_convert_entry_to_zval(return_value, entry);
     pht_entry_delete(entry);
     ++qo->qoi->vn;

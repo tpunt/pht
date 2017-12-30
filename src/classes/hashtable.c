@@ -35,7 +35,7 @@ void free_hashtable_internal(hashtable_obj_internal_t *htoi)
     // be appropriate
     // What if a MQ is put into the HT, fetched from it, GCed, then the HT is
     // destroyed? The refcount will be decremented twice. Perhaps use pointer
-    // tagging on entry_t value to mark the internal DS if it has been GCed?
+    // tagging on pht_entry_t value to mark the internal DS if it has been GCed?
     // What if it gets repopulated and then GCed again?
     pht_hashtable_destroy(&htoi->hashtable, pht_entry_delete);
     free(htoi);
@@ -91,7 +91,7 @@ zval *hto_read_dimension(zval *zobj, zval *offset, int type, zval *rv)
     }
 
     hashtable_obj_t *hto = (hashtable_obj_t *)((char *)Z_OBJ_P(zobj) - Z_OBJ_P(zobj)->handlers->offset);
-    entry_t *e = NULL;
+    pht_entry_t *e = NULL;
 
     switch (Z_TYPE_P(offset)) {
         case IS_STRING:
@@ -126,9 +126,9 @@ zval *hto_read_dimension(zval *zobj, zval *offset, int type, zval *rv)
 void hto_write_dimension(zval *zobj, zval *offset, zval *value)
 {
     hashtable_obj_t *hto = (hashtable_obj_t *)((char *)Z_OBJ_P(zobj) - Z_OBJ_P(zobj)->handlers->offset);
-    entry_t *entry = create_new_entry(value);
+    pht_entry_t *entry = create_new_entry(value);
 
-    if (ENTRY_TYPE(entry) == PHT_SERIALISATION_FAILED) {
+    if (PHT_ENTRY_TYPE(entry) == PHT_SERIALISATION_FAILED) {
         zend_throw_error(NULL, "Failed to serialise the value");
         free(entry);
         return;
@@ -169,7 +169,7 @@ int hto_has_dimension(zval *zobj, zval *offset, int check_empty)
 {
     zend_object *obj = Z_OBJ_P(zobj);
     hashtable_obj_t *hto = (hashtable_obj_t *)((char *)obj - obj->handlers->offset);
-    entry_t *entry = NULL;
+    pht_entry_t *entry = NULL;
 
     switch (Z_TYPE_P(offset)) {
         case IS_STRING:
@@ -194,7 +194,7 @@ int hto_has_dimension(zval *zobj, zval *offset, int check_empty)
     }
 
     if (!check_empty) {
-        return ENTRY_TYPE(entry) != IS_NULL;
+        return PHT_ENTRY_TYPE(entry) != IS_NULL;
     }
 
     zval value;

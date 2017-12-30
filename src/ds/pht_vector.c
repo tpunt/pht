@@ -23,12 +23,12 @@
 
 void pht_vector_init(pht_vector_t *vector, int size)
 {
-    vector->values = calloc(size, sizeof(entry_t *));
+    vector->values = calloc(size, sizeof(pht_entry_t *));
     vector->size = size;
     vector->used = 0;
 }
 
-void pht_vector_push(pht_vector_t *vector, entry_t *value)
+void pht_vector_push(pht_vector_t *vector, pht_entry_t *value)
 {
     if (vector->used == vector->size) {
         vector->size <<= 1;
@@ -38,7 +38,7 @@ void pht_vector_push(pht_vector_t *vector, entry_t *value)
     vector->values[vector->used++] = value;
 }
 
-entry_t *pht_vector_pop(pht_vector_t *vector)
+pht_entry_t *pht_vector_pop(pht_vector_t *vector)
 {
     if (!vector->used) {
         return NULL;
@@ -48,13 +48,13 @@ entry_t *pht_vector_pop(pht_vector_t *vector)
     return vector->values[--vector->used];
 }
 
-entry_t *pht_vector_shift(pht_vector_t *vector)
+pht_entry_t *pht_vector_shift(pht_vector_t *vector)
 {
     if (!vector->used) {
         return NULL;
     }
 
-    entry_t *value = vector->values[0];
+    pht_entry_t *value = vector->values[0];
 
     for (int i = 1; i < vector->used; ++i) {
         vector->values[i - 1] = vector->values[i];
@@ -65,7 +65,7 @@ entry_t *pht_vector_shift(pht_vector_t *vector)
     return value;
 }
 
-void pht_vector_unshift(pht_vector_t *vector, entry_t *value)
+void pht_vector_unshift(pht_vector_t *vector, pht_entry_t *value)
 {
     if (vector->used == vector->size) {
         vector->size <<= 1;

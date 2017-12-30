@@ -28,7 +28,7 @@
 typedef struct _task_t {
     pht_string_t class_name;
     int class_ctor_argc;
-    entry_t *class_ctor_args;
+    pht_entry_t *class_ctor_args;
 } task_t;
 
 typedef enum _status_t {

@@ -26,7 +26,7 @@
 #include "src/classes/hashtable.h"
 #include "src/classes/vector.h"
 
-typedef struct _entry_t {
+typedef struct _pht_entry_t {
     int type;
     union {
         int boolean;
@@ -40,7 +40,7 @@ typedef struct _entry_t {
         // array
         // object
     } val;
-} entry_t;
+} pht_entry_t;
 
 #define PHT_SERIALISATION_FAILED -1
 #define PHT_STORE_FUNC 100
@@ -48,21 +48,21 @@ typedef struct _entry_t {
 #define PHT_HASH_TABLE 102
 #define PHT_VECTOR 103
 
-#define ENTRY_TYPE(s) (s)->type
-#define ENTRY_STRING(s) (s)->val.string
-#define ENTRY_LONG(s) (s)->val.integer
-#define ENTRY_DOUBLE(s) (s)->val.floating
-#define ENTRY_BOOL(s) (s)->val.boolean
-#define ENTRY_FUNC(s) (s)->val.func
-#define ENTRY_Q(s) (s)->val.queue
-#define ENTRY_HT(s) (s)->val.hash_table
-#define ENTRY_V(s) (s)->val.vector
+#define PHT_ENTRY_TYPE(s) (s)->type
+#define PHT_ENTRY_STRING(s) (s)->val.string
+#define PHT_ENTRY_LONG(s) (s)->val.integer
+#define PHT_ENTRY_DOUBLE(s) (s)->val.floating
+#define PHT_ENTRY_BOOL(s) (s)->val.boolean
+#define PHT_ENTRY_FUNC(s) (s)->val.func
+#define PHT_ENTRY_Q(s) (s)->val.queue
+#define PHT_ENTRY_HT(s) (s)->val.hash_table
+#define PHT_ENTRY_V(s) (s)->val.vector
 
-void pht_convert_entry_to_zval(zval *value, entry_t *s);
-void pht_convert_zval_to_entry(entry_t *e, zval *value);
+void pht_convert_entry_to_zval(zval *value, pht_entry_t *s);
+void pht_convert_zval_to_entry(pht_entry_t *e, zval *value);
 void pht_entry_delete(void *entry_void);
-void pht_entry_delete_value(entry_t *entry);
-void pht_entry_update(entry_t *entry, zval *value);
-entry_t *create_new_entry(zval *value);
+void pht_entry_delete_value(pht_entry_t *entry);
+void pht_entry_update(pht_entry_t *entry, zval *value);
+pht_entry_t *create_new_entry(zval *value);
 
 #endif

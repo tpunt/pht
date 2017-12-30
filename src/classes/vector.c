@@ -122,9 +122,9 @@ PHP_METHOD(Vector, push)
         Z_PARAM_ZVAL(value)
     ZEND_PARSE_PARAMETERS_END();
 
-    entry_t *entry = create_new_entry(value);
+    pht_entry_t *entry = create_new_entry(value);
 
-    if (ENTRY_TYPE(entry) == PHT_SERIALISATION_FAILED) {
+    if (PHT_ENTRY_TYPE(entry) == PHT_SERIALISATION_FAILED) {
         zend_throw_error(NULL, "Failed to serialise the value");
         free(entry);
         return;
@@ -145,7 +145,7 @@ PHP_METHOD(Vector, pop)
         return;
     }
 
-    entry_t *entry = pht_vector_pop(&vo->voi->vector);
+    pht_entry_t *entry = pht_vector_pop(&vo->voi->vector);
 
     if (!entry) {
         zend_throw_error(NULL, "Attempted to pop an element from an empty queue");
@@ -167,7 +167,7 @@ PHP_METHOD(Vector, shift)
         return;
     }
 
-    entry_t *entry = pht_vector_shift(&vo->voi->vector);
+    pht_entry_t *entry = pht_vector_shift(&vo->voi->vector);
 
     if (!entry) {
         zend_throw_error(NULL, "Attempted to shift an element from an empty queue");
@@ -191,9 +191,9 @@ PHP_METHOD(Vector, unshift)
         Z_PARAM_ZVAL(value)
     ZEND_PARSE_PARAMETERS_END();
 
-    entry_t *entry = create_new_entry(value);
+    pht_entry_t *entry = create_new_entry(value);
 
-    if (ENTRY_TYPE(entry) == PHT_SERIALISATION_FAILED) {
+    if (PHT_ENTRY_TYPE(entry) == PHT_SERIALISATION_FAILED) {
         zend_throw_error(NULL, "Failed to serialise the value");
         free(entry);
         return;

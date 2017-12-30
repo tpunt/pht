@@ -251,7 +251,7 @@ PHP_METHOD(Thread, addTask)
     task->class_ctor_argc = argc;
 
     if (argc) {
-        task->class_ctor_args = malloc(sizeof(entry_t) * argc);
+        task->class_ctor_args = malloc(sizeof(pht_entry_t) * argc);
 
         for (int i = 0; i < argc; ++i) {
             pht_convert_zval_to_entry(task->class_ctor_args + i, args + i);
