@@ -50,6 +50,23 @@ $v->pop();
 var_dump($v);
 $v->unshift(2);
 var_dump($v);
+$v->pop();
+$v->pop();
+try {
+    var_dump($v->pop());
+} catch (Error $e) {
+    var_dump($e->getMessage());
+}
+try {
+    var_dump($v->shift());
+} catch (Error $e) {
+    var_dump($e->getMessage());
+}
+try {
+    var_dump($v->delete(0));
+} catch (Error $e) {
+    var_dump($e->getMessage());
+}
 --EXPECT--
 object(Vector)#1 (2) {
   [0]=>
@@ -67,3 +84,6 @@ object(Vector)#1 (2) {
   [1]=>
   int(1)
 }
+string(48) "Attempted to pop an element from an empty vector"
+string(50) "Attempted to shift an element from an empty vector"
+string(58) "Attempted to delete an element from an out-of-bounds index"

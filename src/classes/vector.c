@@ -147,7 +147,8 @@ PHP_METHOD(Vector, pop)
     pht_entry_t *entry = pht_vector_pop(&vo->voi->vector);
 
     if (!entry) {
-        zend_throw_error(NULL, "Attempted to pop an element from an empty queue");
+        zend_throw_error(NULL, "Attempted to pop an element from an empty vector");
+        return;
     }
 
     pht_convert_entry_to_zval(return_value, entry);
@@ -169,7 +170,8 @@ PHP_METHOD(Vector, shift)
     pht_entry_t *entry = pht_vector_shift(&vo->voi->vector);
 
     if (!entry) {
-        zend_throw_error(NULL, "Attempted to shift an element from an empty queue");
+        zend_throw_error(NULL, "Attempted to shift an element from an empty vector");
+        return;
     }
 
     pht_convert_entry_to_zval(return_value, entry);
@@ -216,6 +218,7 @@ PHP_METHOD(Vector, delete)
 
     if (!pht_vector_delete(&vo->voi->vector, index)) {
         zend_throw_error(NULL, "Attempted to delete an element from an out-of-bounds index");
+        return;
     }
 
     ++vo->voi->vn;
