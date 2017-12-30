@@ -126,6 +126,12 @@ zval *hto_read_dimension(zval *zobj, zval *offset, int type, zval *rv)
 void hto_write_dimension(zval *zobj, zval *offset, zval *value)
 {
     hashtable_obj_t *hto = (hashtable_obj_t *)((char *)Z_OBJ_P(zobj) - Z_OBJ_P(zobj)->handlers->offset);
+
+    if (!offset) {
+        zend_throw_error(NULL, "Empty offset insertions are not allowed");
+        return;
+    }
+
     pht_entry_t *entry = create_new_entry(value);
 
     if (!entry) {

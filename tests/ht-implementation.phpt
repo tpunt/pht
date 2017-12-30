@@ -52,6 +52,11 @@ var_dump(empty($ht['abc']), empty($ht['def']), empty($ht[0]), empty($ht[1]), emp
 unset($ht['abc']);
 var_dump($ht);
 var_dump(isset($ht['abc']));
+try {
+    $ht[] = 1;
+} catch (Error $e) {
+    var_dump($e->getMessage());
+}
 $ht->unlock();
 
 $thread->join();
@@ -89,3 +94,4 @@ object(HashTable)#2 (3) {
   int(1)
 }
 bool(false)
+string(39) "Empty offset insertions are not allowed"
