@@ -3,7 +3,7 @@ Testing the HT data structure implementation
 --FILE--
 <?php
 
-class Test implements Threaded
+class Test implements Runnable
 {
     private $q;
 

@@ -3,7 +3,7 @@ Testing nesting a thread.
 --FILE--
 <?php
 
-class Test2 implements Threaded
+class Test2 implements Runnable
 {
     public function run()
     {
@@ -11,7 +11,7 @@ class Test2 implements Threaded
     }
 }
 
-class Test implements Threaded
+class Test implements Runnable
 {
     public function run()
     {

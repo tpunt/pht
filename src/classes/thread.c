@@ -27,7 +27,7 @@
 #include "src/pht_debug.h"
 #include "src/classes/thread.h"
 
-extern zend_class_entry *Threaded_ce;
+extern zend_class_entry *Runnable_ce;
 
 zend_object_handlers thread_handlers;
 zend_class_entry *Thread_ce;
@@ -82,7 +82,7 @@ void handle_tasks(thread_obj_t *thread)
             // @todo this will throw an exception in the new thread, rather than at
             // the call site. This doesn't even have an execution context - how
             // should it behave?
-            zend_throw_exception_ex(zend_ce_exception, 0, "Failed to create threaded object from class '%s'\n", ZSTR_VAL(ce_name));
+            zend_throw_exception_ex(zend_ce_exception, 0, "Failed to create Runnable object from class '%s'\n", ZSTR_VAL(ce_name));
             goto finish;
         }
 
@@ -231,7 +231,7 @@ ZEND_END_ARG_INFO()
 
 PHP_METHOD(Thread, addTask)
 {
-    zend_class_entry *ce = Threaded_ce;
+    zend_class_entry *ce = Runnable_ce;
     zval *args;
     int argc = 0;
 
@@ -241,7 +241,7 @@ PHP_METHOD(Thread, addTask)
     ZEND_PARSE_PARAMETERS_END();
 
     // By loading the class entry here, we ensure that it exists before
-    // asynchronously creating the underlying threaded object. We can simply
+    // asynchronously creating the underlying Runnable object. We can simply
     // discard the ce here and use only the ce name now
 
     thread_obj_t *thread = (thread_obj_t *)((char *)Z_OBJ(EX(This)) - Z_OBJ(EX(This))->handlers->offset);

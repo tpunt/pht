@@ -1,6 +1,6 @@
 <?php
 
-class Task implements Threaded
+class Task implements Runnable
 {
     private $q;
 

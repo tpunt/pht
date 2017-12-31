@@ -117,7 +117,7 @@ void pht_convert_entry_to_zval(zval *value, pht_entry_t *e)
                 if (object_init_ex(&zobj, ce) != SUCCESS) {
                     // @todo this will throw an exception in the new thread, rather than at
                     // the call site - how should it behave?
-                    zend_throw_exception(zend_ce_exception, "Failed to threaded object from Queue class", 0);
+                    zend_throw_exception(zend_ce_exception, "Failed to Runnable object from Queue class", 0);
                 }
 
                 PHT_ZG(skip_qoi_creation) = 0;
@@ -142,7 +142,7 @@ void pht_convert_entry_to_zval(zval *value, pht_entry_t *e)
                 if (object_init_ex(&zobj, ce) != SUCCESS) {
                     // @todo this will throw an exception in the new thread, rather than at
                     // the call site - how should it behave?
-                    zend_throw_exception(zend_ce_exception, "Failed to threaded object from HashTable class", 0);
+                    zend_throw_exception(zend_ce_exception, "Failed to Runnable object from HashTable class", 0);
                 }
 
                 PHT_ZG(skip_htoi_creation) = 0;
@@ -167,7 +167,7 @@ void pht_convert_entry_to_zval(zval *value, pht_entry_t *e)
                 if (object_init_ex(&zobj, ce) != SUCCESS) {
                     // @todo this will throw an exception in the new thread, rather than at
                     // the call site - how should it behave?
-                    zend_throw_exception(zend_ce_exception, "Failed to threaded object from Vector class", 0);
+                    zend_throw_exception(zend_ce_exception, "Failed to Runnable object from Vector class", 0);
                 }
 
                 PHT_ZG(skip_voi_creation) = 0;

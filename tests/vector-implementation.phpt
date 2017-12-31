@@ -3,7 +3,7 @@ Testing the vector data structure implementation
 --FILE--
 <?php
 
-class Test implements Threaded
+class Test implements Runnable
 {
     private $v;
 

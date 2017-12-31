@@ -19,19 +19,23 @@
 #include <main/php.h>
 #include <Zend/zend_API.h>
 
-#include "src/classes/threaded.h"
+#include "src/classes/runnable.h"
 
-zend_class_entry *Threaded_ce;
+zend_class_entry *Runnable_ce;
 
-zend_function_entry Threaded_methods[] = {
+ZEND_BEGIN_ARG_INFO_EX(Runnable_run_arginfo, 0, 0, 0)
+ZEND_END_ARG_INFO()
+
+zend_function_entry Runnable_methods[] = {
+    PHP_ABSTRACT_ME(Runnable, run, Runnable_run_arginfo)
     PHP_FE_END
 };
 
-void threaded_ce_init(void)
+void runnable_ce_init(void)
 {
     zend_class_entry ce;
     zend_object_handlers *zh = zend_get_std_object_handlers();
 
-    INIT_CLASS_ENTRY(ce, "Threaded", Threaded_methods);
-    Threaded_ce = zend_register_internal_interface(&ce);
+    INIT_CLASS_ENTRY(ce, "Runnable", Runnable_methods);
+    Runnable_ce = zend_register_internal_interface(&ce);
 }

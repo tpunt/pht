@@ -7,7 +7,7 @@ const A = 1;
 const C = ['a', 1, 'B', false, 'D'];
 const D = ['a', 1, 'B'];
 
-class T implements Threaded
+class T implements Runnable
 {
     public function run()
     {

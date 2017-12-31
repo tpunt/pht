@@ -26,6 +26,7 @@
 #include "php_pht.h"
 #include "src/classes/thread.h"
 #include "src/classes/threaded.h"
+#include "src/classes/runnable.h"
 #include "src/classes/queue.h"
 #include "src/classes/hashtable.h"
 #include "src/classes/vector.h"
@@ -35,6 +36,7 @@ ZEND_DECLARE_MODULE_GLOBALS(pht)
 PHP_MINIT_FUNCTION(pht)
 {
     threaded_ce_init();
+    runnable_ce_init();
     thread_ce_init();
     queue_ce_init();
     hashtable_ce_init();
