@@ -23,6 +23,8 @@
 #include "src/pht_entry.h"
 #include "src/classes/queue.h"
 
+extern zend_class_entry *Threaded_ce;
+
 zend_object_handlers queue_handlers;
 zend_class_entry *Queue_ce;
 
@@ -249,6 +251,7 @@ void queue_ce_init(void)
     Queue_ce = zend_register_internal_class(&ce);
     Queue_ce->create_object = queue_ctor;
 
+    zend_class_implements(Queue_ce, 1, Threaded_ce);
     memcpy(&queue_handlers, zh, sizeof(zend_object_handlers));
 
     queue_handlers.offset = XtOffsetOf(queue_obj_t, obj);

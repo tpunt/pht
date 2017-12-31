@@ -23,6 +23,8 @@
 #include "src/pht_entry.h"
 #include "src/classes/hashtable.h"
 
+extern zend_class_entry *Threaded_ce;
+
 zend_object_handlers hash_table_handlers;
 zend_class_entry *HashTable_ce;
 
@@ -339,6 +341,7 @@ void hashtable_ce_init(void)
     HashTable_ce = zend_register_internal_class(&ce);
     HashTable_ce->create_object = hash_table_ctor;
 
+    zend_class_implements(HashTable_ce, 1, Threaded_ce);
     memcpy(&hash_table_handlers, zh, sizeof(zend_object_handlers));
 
     hash_table_handlers.offset = XtOffsetOf(hashtable_obj_t, obj);

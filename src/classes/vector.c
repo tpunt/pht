@@ -23,6 +23,8 @@
 #include "src/pht_entry.h"
 #include "src/classes/vector.h"
 
+extern zend_class_entry *Threaded_ce;
+
 zend_object_handlers vector_handlers;
 zend_class_entry *Vector_ce;
 
@@ -449,6 +451,7 @@ void vector_ce_init(void)
     Vector_ce = zend_register_internal_class(&ce);
     Vector_ce->create_object = vector_ctor;
 
+    zend_class_implements(Vector_ce, 1, Threaded_ce);
     memcpy(&vector_handlers, zh, sizeof(zend_object_handlers));
 
     vector_handlers.offset = XtOffsetOf(vector_obj_t, obj);
