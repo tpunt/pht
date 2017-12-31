@@ -33,8 +33,10 @@ zend_object_handlers thread_handlers;
 zend_class_entry *Thread_ce;
 threads_t threads;
 
-void task_free(task_t *task)
+void task_delete(void *task_void)
 {
+    task_t *task = task_void;
+
     pht_str_free(&task->class_name);
 
     if (task->class_ctor_argc) {
@@ -53,7 +55,7 @@ void thread_init(thread_obj_t *thread, int tid)
     thread->tid = tid;
     thread->status = UNDER_CONSTRUCTION;
     thread->parent_thread_ls = TSRMLS_CACHE;
-    pht_queue_init(&thread->tasks);
+    pht_queue_init(&thread->tasks, task_delete);
     pthread_mutex_init(&thread->lock, NULL);
 }
 
@@ -98,7 +100,7 @@ void handle_tasks(thread_obj_t *thread)
             // the call site. This doesn't even have an execution context - how
             // should it behave?
             zend_throw_exception_ex(zend_ce_exception, 0, "Failed to create Runnable object from class '%s'\n", ZSTR_VAL(ce_name));
-            task_free(task);
+            task_delete(task);
             goto finish;
         }
 
@@ -140,7 +142,7 @@ void handle_tasks(thread_obj_t *thread)
                     // @todo same exception throwing problem and constructor name as above?
                     zend_error_noreturn(E_CORE_ERROR, "Couldn't execute method %s%s%s", ZSTR_VAL(ce_name), "::", "__construct");
                     zval_dtor(&fci.function_name);
-                    task_free(task);
+                    task_delete(task);
                     goto finish;
                 }
             }
@@ -153,7 +155,7 @@ void handle_tasks(thread_obj_t *thread)
             // dtor on retval?
         }
 
-        task_free(task);
+        task_delete(task);
 
         int result;
         zval retval;

@@ -26,20 +26,20 @@ static void *pht_hashtable_search_direct(pht_hashtable_t *ht, pht_string_t *key,
 static pht_string_t *pht_hashtable_key_fetch_direct(pht_hashtable_t *ht, pht_string_t *key, int hash);
 static void pht_hashtable_insert_direct(pht_hashtable_t *ht, pht_string_t *key, int hash, void *value);
 void pht_hashtable_update_direct(pht_hashtable_t *ht, pht_string_t *key, int hash, void *value);
-void pht_hashtable_delete_direct(pht_hashtable_t *ht, pht_string_t *key, int hash, void (*dtor_value)(void *));
+void pht_hashtable_delete_direct(pht_hashtable_t *ht, pht_string_t *key, int hash);
 static void pht_hashtable_resize(pht_hashtable_t *ht);
 static void pht_hashtable_repopulate(pht_hashtable_t *ht, pht_bucket_t *old_values, int old_size);
 static int get_hash(pht_string_t *key);
 
-void pht_hashtable_init(pht_hashtable_t *ht, int size)
+void pht_hashtable_init(pht_hashtable_t *ht, int size, void (*dtor)(void *))
 {
     ht->values = calloc(sizeof(pht_bucket_t), size);
     ht->size = size;
     ht->used = 0;
-    ht->flags = 0;
+    ht->dtor = dtor;
 }
 
-void pht_hashtable_destroy(pht_hashtable_t *ht, void (*dtor_value)(void *))
+void pht_hashtable_destroy(pht_hashtable_t *ht)
 {
     for (int i = 0; i < ht->size; ++i) {
         pht_bucket_t *b = ht->values + i;
@@ -48,9 +48,9 @@ void pht_hashtable_destroy(pht_hashtable_t *ht, void (*dtor_value)(void *))
             continue;
         }
 
-        dtor_value(b->value);
+        ht->dtor(b->value);
 
-        if (b->key && ht->flags & FREE_KEYS) {
+        if (b->key) {
             free(PHT_STRV_P(b->key));
             free(b->key);
         }
@@ -247,7 +247,7 @@ void pht_hashtable_update_direct(pht_hashtable_t *ht, pht_string_t *key, int has
         pht_bucket_t *b = ht->values + index;
 
         if (b->hash == hash && !(!!b->key ^ !!key) && (!key || pht_str_eq(b->key, key))) {
-            // @todo free previous value?
+            ht->dtor(b->value);
             b->value = value;
             break;
         }
@@ -258,17 +258,17 @@ void pht_hashtable_update_direct(pht_hashtable_t *ht, pht_string_t *key, int has
     }
 }
 
-void pht_hashtable_delete_ind(pht_hashtable_t *ht, int hash, void (*dtor_value)(void *))
+void pht_hashtable_delete_ind(pht_hashtable_t *ht, int hash)
 {
-    pht_hashtable_delete_direct(ht, NULL, hash, dtor_value);
+    pht_hashtable_delete_direct(ht, NULL, hash);
 }
 
-void pht_hashtable_delete(pht_hashtable_t *ht, pht_string_t *key, void (*dtor_value)(void *))
+void pht_hashtable_delete(pht_hashtable_t *ht, pht_string_t *key)
 {
-    pht_hashtable_delete_direct(ht, key, get_hash(key), dtor_value);
+    pht_hashtable_delete_direct(ht, key, get_hash(key));
 }
 
-void pht_hashtable_delete_direct(pht_hashtable_t *ht, pht_string_t *key, int hash, void (*dtor_value)(void *))
+void pht_hashtable_delete_direct(pht_hashtable_t *ht, pht_string_t *key, int hash)
 {
     int index = hash & (ht->size - 1);
 
@@ -283,9 +283,9 @@ void pht_hashtable_delete_direct(pht_hashtable_t *ht, pht_string_t *key, int has
         }
 
         if (b->hash == hash && !(!!b->key ^ !!key) && (!key || pht_str_eq(b->key, key))) {
-            dtor_value(b->value);
+            ht->dtor(b->value);
 
-            if (ht->flags & FREE_KEYS) {
+            if (b->key) {
                 free(PHT_STRV_P(b->key));
                 free(b->key);
             }

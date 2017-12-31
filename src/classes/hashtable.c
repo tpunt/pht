@@ -31,7 +31,7 @@ zend_class_entry *HashTable_ce;
 void htoi_free(hashtable_obj_internal_t *htoi)
 {
     pthread_mutex_destroy(&htoi->lock);
-    pht_hashtable_destroy(&htoi->hashtable, pht_entry_delete);
+    pht_hashtable_destroy(&htoi->hashtable);
     free(htoi);
 }
 
@@ -48,7 +48,7 @@ static zend_object *hash_table_ctor(zend_class_entry *entry)
     if (!PHT_ZG(skip_htoi_creation)) {
         hashtable_obj_internal_t *htoi = calloc(1, sizeof(hashtable_obj_internal_t));
 
-        pht_hashtable_init(&htoi->hashtable, 2);
+        pht_hashtable_init(&htoi->hashtable, 2, pht_entry_delete);
         pthread_mutex_init(&htoi->lock, NULL);
         htoi->refcount = 1;
         htoi->vn = 0;
@@ -217,13 +217,13 @@ void hto_unset_dimension(zval *zobj, zval *offset)
                 pht_string_t key;
 
                 pht_str_update(&key, Z_STRVAL_P(offset), Z_STRLEN_P(offset));
-                pht_hashtable_delete(&hto->htoi->hashtable, &key, pht_entry_delete);
+                pht_hashtable_delete(&hto->htoi->hashtable, &key);
                 pht_str_free(&key);
                 ++hto->htoi->vn;
             }
             break;
         case IS_LONG:
-            pht_hashtable_delete_ind(&hto->htoi->hashtable, Z_LVAL_P(offset), pht_entry_delete);
+            pht_hashtable_delete_ind(&hto->htoi->hashtable, Z_LVAL_P(offset));
             ++hto->htoi->vn;
             break;
         default:

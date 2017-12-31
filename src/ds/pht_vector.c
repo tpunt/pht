@@ -21,11 +21,12 @@
 #include "src/pht_entry.h"
 #include "src/ds/pht_vector.h"
 
-void pht_vector_init(pht_vector_t *vector, int size)
+void pht_vector_init(pht_vector_t *vector, int size, void (*dtor)(void *))
 {
     vector->values = calloc(size, sizeof(pht_entry_t *));
     vector->size = size;
     vector->used = 0;
+    vector->dtor = dtor;
 }
 
 void pht_vector_push(pht_vector_t *vector, pht_entry_t *value)
@@ -145,6 +146,15 @@ int pht_vector_delete_at(pht_vector_t *vector, zend_long i)
 int pht_vector_size(pht_vector_t *vector)
 {
     return vector->used;
+}
+
+void pht_vector_destroy(pht_vector_t *vector)
+{
+    for (int i = 0; i < vector->used; ++i) {
+        vector->dtor(vector->values[i]);
+    }
+
+    free(vector->values);
 }
 
 void pht_vector_to_zend_hashtable(HashTable *zht, pht_vector_t *vector)

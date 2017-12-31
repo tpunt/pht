@@ -31,11 +31,7 @@ zend_class_entry *Queue_ce;
 void qoi_free(queue_obj_internal_t *qoi)
 {
     pthread_mutex_destroy(&qoi->lock);
-
-    while (qoi->queue.size) {
-        pht_entry_delete(pht_queue_pop(&qoi->queue));
-    }
-
+    pht_queue_destroy(&qoi->queue);
     free(qoi);
 }
 

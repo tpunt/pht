@@ -31,12 +31,7 @@ zend_class_entry *Vector_ce;
 void voi_free(vector_obj_internal_t *voi)
 {
     pthread_mutex_destroy(&voi->lock);
-
-    for (int i = 0; i < voi->vector.used; ++i) {
-        pht_entry_delete(voi->vector.values[i]);
-    }
-
-    free(voi->vector.values);
+    pht_vector_destroy(&voi->vector);
     free(voi);
 }
 
@@ -53,7 +48,7 @@ static zend_object *vector_ctor(zend_class_entry *entry)
     if (!PHT_ZG(skip_voi_creation)) {
         vector_obj_internal_t *voi = calloc(1, sizeof(vector_obj_internal_t));
 
-        pht_vector_init(&voi->vector, 2);
+        pht_vector_init(&voi->vector, 2, pht_entry_delete);
         pthread_mutex_init(&voi->lock, NULL);
         voi->refcount = 1;
         voi->vn = 0;

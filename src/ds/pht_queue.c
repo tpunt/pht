@@ -21,11 +21,12 @@
 #include "src/pht_entry.h"
 #include "src/ds/pht_queue.h"
 
-void pht_queue_init(pht_queue_t *queue)
+void pht_queue_init(pht_queue_t *queue, void (*dtor)(void *))
 {
     queue->elements = NULL;
     queue->last = NULL;
     queue->size = 0;
+    queue->dtor = dtor;
 }
 
 void pht_queue_push(pht_queue_t *queue, void *element)
@@ -78,6 +79,13 @@ void *pht_queue_front(pht_queue_t *queue)
 int pht_queue_size(pht_queue_t *queue)
 {
     return queue->size;
+}
+
+void pht_queue_destroy(pht_queue_t *queue)
+{
+    while (queue->size) {
+        pht_entry_delete(pht_queue_pop(queue));
+    }
 }
 
 void pht_queue_to_zend_hashtable(HashTable *zht, pht_queue_t *queue)
