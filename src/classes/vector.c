@@ -33,9 +33,6 @@ void voi_free(vector_obj_internal_t *voi)
     pthread_mutex_destroy(&voi->lock);
 
     for (int i = 0; i < voi->vector.used; ++i) {
-        // @todo check if object is either another MQ or a HT (its refcount will
-        // need to be decremented if so).
-        // This should go into a specific vector_destroy method.
         pht_entry_delete(voi->vector.values[i]);
     }
 

@@ -33,9 +33,6 @@ void qoi_free(queue_obj_internal_t *qoi)
     pthread_mutex_destroy(&qoi->lock);
 
     while (qoi->queue.size) {
-        // @todo check if object is either another MQ or a HT (its refcount will
-        // need to be decremented if so).
-        // This should go into a specific queue_destroy method.
         pht_entry_delete(pht_queue_pop(&qoi->queue));
     }
 

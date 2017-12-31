@@ -31,14 +31,6 @@ zend_class_entry *HashTable_ce;
 void htoi_free(hashtable_obj_internal_t *htoi)
 {
     pthread_mutex_destroy(&htoi->lock);
-
-    // How to see if any values are either another MQ or a HT (where their
-    // refcounts will need to be decremented?). Doing so in the callback may not
-    // be appropriate
-    // What if a MQ is put into the HT, fetched from it, GCed, then the HT is
-    // destroyed? The refcount will be decremented twice. Perhaps use pointer
-    // tagging on pht_entry_t value to mark the internal DS if it has been GCed?
-    // What if it gets repopulated and then GCed again?
     pht_hashtable_destroy(&htoi->hashtable, pht_entry_delete);
     free(htoi);
 }

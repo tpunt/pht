@@ -33,6 +33,21 @@ zend_object_handlers thread_handlers;
 zend_class_entry *Thread_ce;
 threads_t threads;
 
+void task_free(task_t *task)
+{
+    pht_str_free(&task->class_name);
+
+    if (task->class_ctor_argc) {
+        for (int i = 0; i < task->class_ctor_argc; ++i) {
+            pht_entry_delete_value(task->class_ctor_args + i);
+        }
+
+        free(task->class_ctor_args);
+    }
+
+    free(task);
+}
+
 void thread_init(thread_obj_t *thread, int tid)
 {
     thread->tid = tid;
@@ -76,13 +91,14 @@ void handle_tasks(thread_obj_t *thread)
         zend_string *ce_name = zend_string_init(task->class_name.val, task->class_name.len, 0);
         zend_class_entry *ce = zend_fetch_class_by_name(ce_name, NULL, ZEND_FETCH_CLASS_DEFAULT | ZEND_FETCH_CLASS_EXCEPTION);
         zend_function *constructor, *run;
-        zval zobj, zargs[task->class_ctor_argc]; // goto cannot bypass VLAs...
+        zval zobj;
 
         if (object_init_ex(&zobj, ce) != SUCCESS) {
             // @todo this will throw an exception in the new thread, rather than at
             // the call site. This doesn't even have an execution context - how
             // should it behave?
             zend_throw_exception_ex(zend_ce_exception, 0, "Failed to create Runnable object from class '%s'\n", ZSTR_VAL(ce_name));
+            task_free(task);
             goto finish;
         }
 
@@ -97,13 +113,11 @@ void handle_tasks(thread_obj_t *thread)
         reference count will not be decremented again. So we always convert
         serialised entries to their zvals to prevent this issue.
         */
-        for (int i = 0; i < task->class_ctor_argc; ++i) {
-            pht_convert_entry_to_zval(zargs + i, task->class_ctor_args + i);
-        }
+
 
         if (constructor) {
             int result;
-            zval retval;
+            zval retval, zargs[task->class_ctor_argc];
             zend_fcall_info fci;
 
             fci.size = sizeof(fci);
@@ -115,6 +129,10 @@ void handle_tasks(thread_obj_t *thread)
             // @todo doesn't have to be __construct (could be class name instead)
             ZVAL_STRINGL(&fci.function_name, "__construct", sizeof("__construct") - 1);
 
+            for (int i = 0; i < task->class_ctor_argc; ++i) {
+                pht_convert_entry_to_zval(zargs + i, task->class_ctor_args + i);
+            }
+
             result = zend_call_function(&fci, NULL);
 
             if (result == FAILURE) {
@@ -122,13 +140,20 @@ void handle_tasks(thread_obj_t *thread)
                     // @todo same exception throwing problem and constructor name as above?
                     zend_error_noreturn(E_CORE_ERROR, "Couldn't execute method %s%s%s", ZSTR_VAL(ce_name), "::", "__construct");
                     zval_dtor(&fci.function_name);
+                    task_free(task);
                     goto finish;
                 }
+            }
+
+            for (int i = 0; i < task->class_ctor_argc; ++i) {
+                zval_dtor(zargs + i);
             }
 
             zval_dtor(&fci.function_name);
             // dtor on retval?
         }
+
+        task_free(task);
 
         int result;
         zval retval;
@@ -155,11 +180,7 @@ void handle_tasks(thread_obj_t *thread)
 
 finish:
         zend_string_free(ce_name);
-
-        if (task->class_ctor_args) {
-            free(task->class_ctor_args);
-        }
-        free(task);
+        zval_ptr_dtor(&zobj);
     }
 }
 
