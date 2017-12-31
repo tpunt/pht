@@ -30,6 +30,8 @@
 #include "src/pht_entry.h"
 #include "src/pht_copy.h"
 
+extern zend_class_entry *Threaded_ce;
+
 void pht_entry_delete(void *entry_void)
 {
     pht_entry_t *entry = entry_void;
@@ -255,33 +257,37 @@ int pht_convert_zval_to_entry(pht_entry_t *e, zval *value)
                     PHT_ENTRY_FUNC(e) = malloc(sizeof(zend_op_array));
                     memcpy(PHT_ENTRY_FUNC(e), zend_get_closure_method_def(value), sizeof(zend_op_array));
                     Z_ADDREF_P(value);
-                } else if (instanceof_function(Z_OBJCE_P(value), Queue_ce)) {
-                    queue_obj_t *qo = (queue_obj_t *)((char *)Z_OBJ_P(value) - Z_OBJ_P(value)->handlers->offset);
+                } else if (instanceof_function(Z_OBJCE_P(value), Threaded_ce)) {
+                    if (instanceof_function(Z_OBJCE_P(value), Queue_ce)) {
+                        queue_obj_t *qo = (queue_obj_t *)((char *)Z_OBJ_P(value) - Z_OBJ_P(value)->handlers->offset);
 
-                    PHT_ENTRY_TYPE(e) = PHT_QUEUE;
-                    PHT_ENTRY_Q(e) = qo;
+                        PHT_ENTRY_TYPE(e) = PHT_QUEUE;
+                        PHT_ENTRY_Q(e) = qo;
 
-                    pthread_mutex_lock(&qo->qoi->lock);
-                    ++qo->qoi->refcount;
-                    pthread_mutex_unlock(&qo->qoi->lock);
-                } else if (instanceof_function(Z_OBJCE_P(value), HashTable_ce)) {
-                    hashtable_obj_t *hto = (hashtable_obj_t *)((char *)Z_OBJ_P(value) - Z_OBJ_P(value)->handlers->offset);
+                        pthread_mutex_lock(&qo->qoi->lock);
+                        ++qo->qoi->refcount;
+                        pthread_mutex_unlock(&qo->qoi->lock);
+                    } else if (instanceof_function(Z_OBJCE_P(value), HashTable_ce)) {
+                        hashtable_obj_t *hto = (hashtable_obj_t *)((char *)Z_OBJ_P(value) - Z_OBJ_P(value)->handlers->offset);
 
-                    PHT_ENTRY_TYPE(e) = PHT_HASH_TABLE;
-                    PHT_ENTRY_HT(e) = hto;
+                        PHT_ENTRY_TYPE(e) = PHT_HASH_TABLE;
+                        PHT_ENTRY_HT(e) = hto;
 
-                    pthread_mutex_lock(&hto->htoi->lock);
-                    ++hto->htoi->refcount;
-                    pthread_mutex_unlock(&hto->htoi->lock);
-                }  else if (instanceof_function(Z_OBJCE_P(value), Vector_ce)) {
-                    vector_obj_t *vo = (vector_obj_t *)((char *)Z_OBJ_P(value) - Z_OBJ_P(value)->handlers->offset);
+                        pthread_mutex_lock(&hto->htoi->lock);
+                        ++hto->htoi->refcount;
+                        pthread_mutex_unlock(&hto->htoi->lock);
+                    } else if (instanceof_function(Z_OBJCE_P(value), Vector_ce)) {
+                        vector_obj_t *vo = (vector_obj_t *)((char *)Z_OBJ_P(value) - Z_OBJ_P(value)->handlers->offset);
 
-                    PHT_ENTRY_TYPE(e) = PHT_VECTOR;
-                    PHT_ENTRY_V(e) = vo;
+                        PHT_ENTRY_TYPE(e) = PHT_VECTOR;
+                        PHT_ENTRY_V(e) = vo;
 
-                    pthread_mutex_lock(&vo->voi->lock);
-                    ++vo->voi->refcount;
-                    pthread_mutex_unlock(&vo->voi->lock);
+                        pthread_mutex_lock(&vo->voi->lock);
+                        ++vo->voi->refcount;
+                        pthread_mutex_unlock(&vo->voi->lock);
+                    } else {
+                        assert(0);
+                    }
                 } else {
                     // temporary solution - just serialise it and to the hell with the consequences
                     smart_str smart = {0};
