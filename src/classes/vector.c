@@ -442,6 +442,7 @@ void vector_ce_init(void)
     INIT_CLASS_ENTRY(ce, "Vector", Vector_methods);
     Vector_ce = zend_register_internal_class(&ce);
     Vector_ce->create_object = vector_ctor;
+    Vector_ce->ce_flags |= ZEND_ACC_FINAL;
 
     zend_class_implements(Vector_ce, 1, Threaded_ce);
     memcpy(&vector_handlers, zh, sizeof(zend_object_handlers));
