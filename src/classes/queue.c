@@ -225,14 +225,14 @@ zend_function_entry Queue_methods[] = {
 
 zval *qo_read_property(zval *object, zval *member, int type, void **cache, zval *rv)
 {
-    zend_throw_exception(zend_ce_exception, "Properties on Queue objects are not enabled", 0);
+    zend_throw_error(zend_ce_error, "Properties on Queue objects are not enabled", 0);
 
     return &EG(uninitialized_zval);
 }
 
 void qo_write_property(zval *object, zval *member, zval *value, void **cache_slot)
 {
-    zend_throw_exception(zend_ce_exception, "Properties on Queue objects are not enabled", 0);
+    zend_throw_error(zend_ce_error, "Properties on Queue objects are not enabled", 0);
 }
 
 void queue_ce_init(void)

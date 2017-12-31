@@ -314,14 +314,14 @@ zend_function_entry HashTable_methods[] = {
 
 zval *hto_read_property(zval *object, zval *member, int type, void **cache, zval *rv)
 {
-    zend_throw_exception(zend_ce_exception, "Properties on HashTable objects are not enabled", 0);
+    zend_throw_error(zend_ce_error, "Properties on HashTable objects are not enabled", 0);
 
     return &EG(uninitialized_zval);
 }
 
 void hto_write_property(zval *object, zval *member, zval *value, void **cache_slot)
 {
-    zend_throw_exception(zend_ce_exception, "Properties on HashTable objects are not enabled", 0);
+    zend_throw_error(zend_ce_error, "Properties on HashTable objects are not enabled", 0);
 }
 
 void hashtable_ce_init(void)

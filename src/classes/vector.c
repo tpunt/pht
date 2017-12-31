@@ -424,14 +424,14 @@ zend_function_entry Vector_methods[] = {
 
 zval *vo_read_property(zval *object, zval *member, int type, void **cache, zval *rv)
 {
-    zend_throw_exception(zend_ce_exception, "Properties on Vector objects are not enabled", 0);
+    zend_throw_error(zend_ce_error, "Properties on Vector objects are not enabled", 0);
 
     return &EG(uninitialized_zval);
 }
 
 void vo_write_property(zval *object, zval *member, zval *value, void **cache_slot)
 {
-    zend_throw_exception(zend_ce_exception, "Properties on Vector objects are not enabled", 0);
+    zend_throw_error(zend_ce_error, "Properties on Vector objects are not enabled", 0);
 }
 
 void vector_ce_init(void)

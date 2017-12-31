@@ -7,13 +7,13 @@ $q = new Queue();
 
 try {
     $q->a = 1;
-} catch (Exception $e) {
+} catch (Error $e) {
     var_dump($e->getMessage());
 }
 
 try {
     var_dump($q->a);
-} catch (Exception $e) {
+} catch (Error $e) {
     var_dump($e->getMessage());
 }
 --EXPECT--
