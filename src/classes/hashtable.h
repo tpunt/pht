@@ -38,6 +38,7 @@ typedef struct _hashtable_obj_t {
     zend_object obj;
 } hashtable_obj_t;
 
+void htoi_free(hashtable_obj_internal_t *htoi);
 void hashtable_ce_init(void);
 
 extern zend_class_entry *HashTable_ce;

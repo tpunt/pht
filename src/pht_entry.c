@@ -50,6 +50,33 @@ void pht_entry_delete_value(pht_entry_t *entry)
         case IS_ARRAY:
         case IS_STRING:
             free(PHT_STRV(PHT_ENTRY_STRING(entry)));
+            break;
+        case PHT_QUEUE:
+            pthread_mutex_lock(&PHT_ENTRY_Q(entry)->qoi->lock);
+            --PHT_ENTRY_Q(entry)->qoi->refcount;
+            pthread_mutex_unlock(&PHT_ENTRY_Q(entry)->qoi->lock);
+
+            if (!PHT_ENTRY_Q(entry)->qoi->refcount) {
+                qoi_free(PHT_ENTRY_Q(entry)->qoi);
+            }
+            break;
+        case PHT_HASH_TABLE:
+            pthread_mutex_lock(&PHT_ENTRY_HT(entry)->htoi->lock);
+            --PHT_ENTRY_HT(entry)->htoi->refcount;
+            pthread_mutex_unlock(&PHT_ENTRY_HT(entry)->htoi->lock);
+
+            if (!PHT_ENTRY_HT(entry)->htoi->refcount) {
+                htoi_free(PHT_ENTRY_HT(entry)->htoi);
+            }
+            break;
+        case PHT_VECTOR:
+            pthread_mutex_lock(&PHT_ENTRY_V(entry)->voi->lock);
+            --PHT_ENTRY_V(entry)->voi->refcount;
+            pthread_mutex_unlock(&PHT_ENTRY_V(entry)->voi->lock);
+
+            if (!PHT_ENTRY_V(entry)->voi->refcount) {
+                voi_free(PHT_ENTRY_V(entry)->voi);
+            }
     }
 }
 
@@ -128,6 +155,10 @@ void pht_convert_entry_to_zval(zval *value, pht_entry_t *e)
 
                 new_qo->qoi = PHT_ENTRY_Q(e)->qoi;
 
+                pthread_mutex_lock(&new_qo->qoi->lock);
+                ++new_qo->qoi->refcount;
+                pthread_mutex_unlock(&new_qo->qoi->lock);
+
                 zend_string_free(ce_name);
 
                 ZVAL_OBJ(value, Z_OBJ(zobj));
@@ -153,6 +184,10 @@ void pht_convert_entry_to_zval(zval *value, pht_entry_t *e)
 
                 new_hto->htoi = PHT_ENTRY_HT(e)->htoi;
 
+                pthread_mutex_lock(&new_hto->htoi->lock);
+                ++new_hto->htoi->refcount;
+                pthread_mutex_unlock(&new_hto->htoi->lock);
+
                 zend_string_free(ce_name);
 
                 ZVAL_OBJ(value, Z_OBJ(zobj));
@@ -177,6 +212,10 @@ void pht_convert_entry_to_zval(zval *value, pht_entry_t *e)
                 vector_obj_t *new_vo = (vector_obj_t *)((char *)Z_OBJ(zobj) - Z_OBJ(zobj)->handlers->offset);
 
                 new_vo->voi = PHT_ENTRY_V(e)->voi;
+
+                pthread_mutex_lock(&new_vo->voi->lock);
+                ++new_vo->voi->refcount;
+                pthread_mutex_unlock(&new_vo->voi->lock);
 
                 zend_string_free(ce_name);
 

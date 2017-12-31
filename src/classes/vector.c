@@ -28,7 +28,7 @@ extern zend_class_entry *Threaded_ce;
 zend_object_handlers vector_handlers;
 zend_class_entry *Vector_ce;
 
-void free_vector_internal(vector_obj_internal_t *voi)
+void voi_free(vector_obj_internal_t *voi)
 {
     pthread_mutex_destroy(&voi->lock);
 
@@ -81,7 +81,7 @@ void vo_free_obj(zend_object *obj)
     pthread_mutex_unlock(&vo->voi->lock);
 
     if (!vo->voi->refcount) {
-        free_vector_internal(vo->voi);
+        voi_free(vo->voi);
     }
 }
 

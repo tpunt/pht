@@ -34,6 +34,7 @@ typedef struct _vector_obj_t {
     zend_object obj;
 } vector_obj_t;
 
+void voi_free(vector_obj_internal_t *voi);
 void vector_ce_init(void);
 
 extern zend_class_entry *Vector_ce;

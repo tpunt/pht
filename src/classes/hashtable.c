@@ -28,7 +28,7 @@ extern zend_class_entry *Threaded_ce;
 zend_object_handlers hash_table_handlers;
 zend_class_entry *HashTable_ce;
 
-void free_hashtable_internal(hashtable_obj_internal_t *htoi)
+void htoi_free(hashtable_obj_internal_t *htoi)
 {
     pthread_mutex_destroy(&htoi->lock);
 
@@ -81,7 +81,7 @@ void hto_free_obj(zend_object *obj)
     pthread_mutex_unlock(&hto->htoi->lock);
 
     if (!hto->htoi->refcount) {
-        free_hashtable_internal(hto->htoi);
+        htoi_free(hto->htoi);
     }
 }
 

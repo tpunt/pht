@@ -28,7 +28,7 @@ extern zend_class_entry *Threaded_ce;
 zend_object_handlers queue_handlers;
 zend_class_entry *Queue_ce;
 
-void free_queue_internal(queue_obj_internal_t *qoi)
+void qoi_free(queue_obj_internal_t *qoi)
 {
     pthread_mutex_destroy(&qoi->lock);
 
@@ -79,7 +79,7 @@ void qo_free_obj(zend_object *obj)
     pthread_mutex_unlock(&qo->qoi->lock);
 
     if (!qo->qoi->refcount) {
-        free_queue_internal(qo->qoi);
+        qoi_free(qo->qoi);
     }
 }
 

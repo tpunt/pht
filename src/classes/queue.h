@@ -38,6 +38,7 @@ typedef struct _queue_obj_t {
     zend_object obj;
 } queue_obj_t;
 
+void qoi_free(queue_obj_internal_t *qoi);
 void queue_ce_init(void);
 
 extern zend_class_entry *Queue_ce;
