@@ -18,6 +18,7 @@
 
 #include <Zend/zend_API.h>
 #include <Zend/zend_exceptions.h>
+#include <Zend/zend_interfaces.h>
 
 #include "php_pht.h"
 #include "src/pht_entry.h"
@@ -443,6 +444,8 @@ void vector_ce_init(void)
     Vector_ce = zend_register_internal_class(&ce);
     Vector_ce->create_object = vector_ctor;
     Vector_ce->ce_flags |= ZEND_ACC_FINAL;
+    Vector_ce->serialize = zend_class_serialize_deny;
+    Vector_ce->unserialize = zend_class_unserialize_deny;
 
     zend_class_implements(Vector_ce, 1, Threaded_ce);
     memcpy(&vector_handlers, zh, sizeof(zend_object_handlers));

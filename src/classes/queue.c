@@ -18,6 +18,7 @@
 
 #include <Zend/zend_API.h>
 #include <Zend/zend_exceptions.h>
+#include <Zend/zend_interfaces.h>
 
 #include "php_pht.h"
 #include "src/pht_entry.h"
@@ -244,6 +245,8 @@ void queue_ce_init(void)
     Queue_ce = zend_register_internal_class(&ce);
     Queue_ce->create_object = queue_ctor;
     Queue_ce->ce_flags |= ZEND_ACC_FINAL;
+    Queue_ce->serialize = zend_class_serialize_deny;
+    Queue_ce->unserialize = zend_class_unserialize_deny;
 
     zend_class_implements(Queue_ce, 1, Threaded_ce);
     memcpy(&queue_handlers, zh, sizeof(zend_object_handlers));

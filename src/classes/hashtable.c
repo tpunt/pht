@@ -18,6 +18,7 @@
 
 #include <Zend/zend_API.h>
 #include <Zend/zend_exceptions.h>
+#include <Zend/zend_interfaces.h>
 
 #include "php_pht.h"
 #include "src/pht_entry.h"
@@ -333,6 +334,8 @@ void hashtable_ce_init(void)
     HashTable_ce = zend_register_internal_class(&ce);
     HashTable_ce->create_object = hash_table_ctor;
     HashTable_ce->ce_flags |= ZEND_ACC_FINAL;
+    HashTable_ce->serialize = zend_class_serialize_deny;
+    HashTable_ce->unserialize = zend_class_unserialize_deny;
 
     zend_class_implements(HashTable_ce, 1, Threaded_ce);
     memcpy(&hash_table_handlers, zh, sizeof(zend_object_handlers));
