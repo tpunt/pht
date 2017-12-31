@@ -52,30 +52,30 @@ void pht_entry_delete_value(pht_entry_t *entry)
             free(PHT_STRV(PHT_ENTRY_STRING(entry)));
             break;
         case PHT_QUEUE:
-            pthread_mutex_lock(&PHT_ENTRY_Q(entry)->qoi->lock);
-            --PHT_ENTRY_Q(entry)->qoi->refcount;
-            pthread_mutex_unlock(&PHT_ENTRY_Q(entry)->qoi->lock);
+            pthread_mutex_lock(&PHT_ENTRY_Q(entry)->lock);
+            --PHT_ENTRY_Q(entry)->refcount;
+            pthread_mutex_unlock(&PHT_ENTRY_Q(entry)->lock);
 
-            if (!PHT_ENTRY_Q(entry)->qoi->refcount) {
-                qoi_free(PHT_ENTRY_Q(entry)->qoi);
+            if (!PHT_ENTRY_Q(entry)->refcount) {
+                qoi_free(PHT_ENTRY_Q(entry));
             }
             break;
         case PHT_HASH_TABLE:
-            pthread_mutex_lock(&PHT_ENTRY_HT(entry)->htoi->lock);
-            --PHT_ENTRY_HT(entry)->htoi->refcount;
-            pthread_mutex_unlock(&PHT_ENTRY_HT(entry)->htoi->lock);
+            pthread_mutex_lock(&PHT_ENTRY_HT(entry)->lock);
+            --PHT_ENTRY_HT(entry)->refcount;
+            pthread_mutex_unlock(&PHT_ENTRY_HT(entry)->lock);
 
-            if (!PHT_ENTRY_HT(entry)->htoi->refcount) {
-                htoi_free(PHT_ENTRY_HT(entry)->htoi);
+            if (!PHT_ENTRY_HT(entry)->refcount) {
+                htoi_free(PHT_ENTRY_HT(entry));
             }
             break;
         case PHT_VECTOR:
-            pthread_mutex_lock(&PHT_ENTRY_V(entry)->voi->lock);
-            --PHT_ENTRY_V(entry)->voi->refcount;
-            pthread_mutex_unlock(&PHT_ENTRY_V(entry)->voi->lock);
+            pthread_mutex_lock(&PHT_ENTRY_V(entry)->lock);
+            --PHT_ENTRY_V(entry)->refcount;
+            pthread_mutex_unlock(&PHT_ENTRY_V(entry)->lock);
 
-            if (!PHT_ENTRY_V(entry)->voi->refcount) {
-                voi_free(PHT_ENTRY_V(entry)->voi);
+            if (!PHT_ENTRY_V(entry)->refcount) {
+                voi_free(PHT_ENTRY_V(entry));
             }
     }
 }
@@ -153,7 +153,7 @@ void pht_convert_entry_to_zval(zval *value, pht_entry_t *e)
 
                 queue_obj_t *new_qo = (queue_obj_t *)((char *)Z_OBJ(zobj) - Z_OBJ(zobj)->handlers->offset);
 
-                new_qo->qoi = PHT_ENTRY_Q(e)->qoi;
+                new_qo->qoi = PHT_ENTRY_Q(e);
 
                 pthread_mutex_lock(&new_qo->qoi->lock);
                 ++new_qo->qoi->refcount;
@@ -182,7 +182,7 @@ void pht_convert_entry_to_zval(zval *value, pht_entry_t *e)
 
                 hashtable_obj_t *new_hto = (hashtable_obj_t *)((char *)Z_OBJ(zobj) - Z_OBJ(zobj)->handlers->offset);
 
-                new_hto->htoi = PHT_ENTRY_HT(e)->htoi;
+                new_hto->htoi = PHT_ENTRY_HT(e);
 
                 pthread_mutex_lock(&new_hto->htoi->lock);
                 ++new_hto->htoi->refcount;
@@ -211,7 +211,7 @@ void pht_convert_entry_to_zval(zval *value, pht_entry_t *e)
 
                 vector_obj_t *new_vo = (vector_obj_t *)((char *)Z_OBJ(zobj) - Z_OBJ(zobj)->handlers->offset);
 
-                new_vo->voi = PHT_ENTRY_V(e)->voi;
+                new_vo->voi = PHT_ENTRY_V(e);
 
                 pthread_mutex_lock(&new_vo->voi->lock);
                 ++new_vo->voi->refcount;
@@ -301,7 +301,7 @@ int pht_convert_zval_to_entry(pht_entry_t *e, zval *value)
                         queue_obj_t *qo = (queue_obj_t *)((char *)Z_OBJ_P(value) - Z_OBJ_P(value)->handlers->offset);
 
                         PHT_ENTRY_TYPE(e) = PHT_QUEUE;
-                        PHT_ENTRY_Q(e) = qo;
+                        PHT_ENTRY_Q(e) = qo->qoi;
 
                         pthread_mutex_lock(&qo->qoi->lock);
                         ++qo->qoi->refcount;
@@ -310,7 +310,7 @@ int pht_convert_zval_to_entry(pht_entry_t *e, zval *value)
                         hashtable_obj_t *hto = (hashtable_obj_t *)((char *)Z_OBJ_P(value) - Z_OBJ_P(value)->handlers->offset);
 
                         PHT_ENTRY_TYPE(e) = PHT_HASH_TABLE;
-                        PHT_ENTRY_HT(e) = hto;
+                        PHT_ENTRY_HT(e) = hto->htoi;
 
                         pthread_mutex_lock(&hto->htoi->lock);
                         ++hto->htoi->refcount;
@@ -319,7 +319,7 @@ int pht_convert_zval_to_entry(pht_entry_t *e, zval *value)
                         vector_obj_t *vo = (vector_obj_t *)((char *)Z_OBJ_P(value) - Z_OBJ_P(value)->handlers->offset);
 
                         PHT_ENTRY_TYPE(e) = PHT_VECTOR;
-                        PHT_ENTRY_V(e) = vo;
+                        PHT_ENTRY_V(e) = vo->voi;
 
                         pthread_mutex_lock(&vo->voi->lock);
                         ++vo->voi->refcount;

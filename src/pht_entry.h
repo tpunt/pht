@@ -34,9 +34,9 @@ typedef struct _pht_entry_t {
         double floating;
         pht_string_t string;
         zend_function *func;
-        queue_obj_t *queue;
-        hashtable_obj_t *hash_table;
-        vector_obj_t *vector;
+        queue_obj_internal_t *queue;
+        hashtable_obj_internal_t *hash_table;
+        vector_obj_internal_t *vector;
         // array
         // object
     } val;
