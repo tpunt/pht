@@ -318,10 +318,10 @@ static void copy_zend_op_array(zend_op_array *new_op_array, zend_op_array *old_o
     new_op_array->try_catch_array = copy_zend_try_catch_element(old_op_array->try_catch_array, old_op_array->last_try_catch);
     new_op_array->static_variables = copy_static_variables(old_op_array->static_variables);
 
-    if (!(new_op_array->filename = zend_hash_find_ptr(&PHT_ZG(interned_strings), old_op_array->filename))) {
+    if (!(new_op_array->filename = zend_hash_find_ptr(&PHT_ZG(op_array_file_names), old_op_array->filename))) {
         zend_string *filename = zend_string_dup(old_op_array->filename, 0);
 
-        new_op_array->filename = zend_hash_add_ptr(&PHT_ZG(interned_strings), filename, filename);
+        new_op_array->filename = zend_hash_add_ptr(&PHT_ZG(op_array_file_names), filename, filename);
         zend_string_release(filename);
     }
 
