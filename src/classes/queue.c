@@ -72,6 +72,8 @@ void qo_free_obj(zend_object *obj)
     --qo->qoi->refcount;
     pthread_mutex_unlock(&qo->qoi->lock);
 
+    zend_hash_index_del(&PHT_ZG(itc_ds), (zend_ulong)qo->qoi);
+
     if (!qo->qoi->refcount) {
         qoi_free(qo->qoi);
     }

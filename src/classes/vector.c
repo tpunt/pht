@@ -73,6 +73,8 @@ void vo_free_obj(zend_object *obj)
     --vo->voi->refcount;
     pthread_mutex_unlock(&vo->voi->lock);
 
+    zend_hash_index_del(&PHT_ZG(itc_ds), (zend_ulong)vo->voi);
+
     if (!vo->voi->refcount) {
         voi_free(vo->voi);
     }

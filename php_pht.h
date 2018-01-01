@@ -42,6 +42,7 @@ extern zend_module_entry pht_module_entry;
 ZEND_BEGIN_MODULE_GLOBALS(pht)
     void ***parent_thread_ls;
     HashTable interned_strings; // used for op_array file names
+    HashTable itc_ds;
     zend_bool skip_qoi_creation;
     zend_bool skip_htoi_creation;
     zend_bool skip_voi_creation;

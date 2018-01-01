@@ -73,6 +73,8 @@ void hto_free_obj(zend_object *obj)
     --hto->htoi->refcount;
     pthread_mutex_unlock(&hto->htoi->lock);
 
+    zend_hash_index_del(&PHT_ZG(itc_ds), (zend_ulong)hto->htoi);
+
     if (!hto->htoi->refcount) {
         htoi_free(hto->htoi);
     }
