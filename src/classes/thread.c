@@ -50,9 +50,8 @@ void task_delete(void *task_void)
     free(task);
 }
 
-void thread_init(thread_obj_t *thread, int tid)
+void thread_init(thread_obj_t *thread)
 {
-    thread->tid = tid;
     thread->status = UNDER_CONSTRUCTION;
     thread->parent_thread_ls = TSRMLS_CACHE;
     pht_queue_init(&thread->tasks, task_delete);
@@ -64,20 +63,19 @@ void thread_destroy(thread_obj_t *thread)
     pthread_mutex_destroy(&thread->lock);
 }
 
-int aquire_thread_id(void)
+void thread_join_destroy(zval *zthread)
 {
-    pthread_mutex_lock(&threads.lock);
+    thread_obj_t *thread = Z_PTR_P(zthread);
 
-    if (threads.used == threads.size) {
-        threads.size <<= 1;
-        threads.thread_table = realloc(threads.thread_table, threads.size  * sizeof(thread_obj_t *));
-    }
+    thread->status = DESTROYED;
 
-    int tid = threads.used++;
+    pthread_join(thread->thread, NULL);
 
-    pthread_mutex_unlock(&threads.lock);
+    pthread_mutex_destroy(&thread->lock);
 
-    return tid;
+    // technically, thread should leak here without an efree, but because this
+    // function is indirectly invoked in the free_obj callback, we cannot efree
+    // here. This only occurs for when threads are not explicitly join()'ed
 }
 
 void handle_tasks(thread_obj_t *thread)
@@ -105,17 +103,6 @@ void handle_tasks(thread_obj_t *thread)
         }
 
         constructor = Z_OBJ_HT(zobj)->get_constructor(Z_OBJ(zobj));
-
-        /*
-        This is done here, rather than in the constructor branch, because if
-        a HT or queue is passed in as an argument to Thread::addTask, then
-        its reference count will be incremented. If no constructor is declared,
-        however, then the constructor branch will never be hit, the
-        corresponding HT or queue object will not be constructed, and so the
-        reference count will not be decremented again. So we always convert
-        serialised entries to their zvals to prevent this issue.
-        */
-
 
         if (constructor) {
             int result;
@@ -225,18 +212,15 @@ void *worker_function(thread_obj_t *thread)
 static zend_object *thread_ctor(zend_class_entry *entry)
 {
     thread_obj_t *thread = ecalloc(1, sizeof(thread_obj_t) + zend_object_properties_size(entry));
-    int tid = aquire_thread_id();
 
-    thread_init(thread, tid);
+    thread_init(thread);
 
     zend_object_std_init(&thread->obj, entry);
     object_properties_init(&thread->obj, entry);
 
     thread->obj.handlers = &thread_handlers;
 
-    pthread_mutex_lock(&threads.lock);
-    threads.thread_table[tid] = thread;
-    pthread_mutex_unlock(&threads.lock);
+    zend_hash_index_add_ptr(&PHT_ZG(child_threads), (zend_ulong)thread, thread);
 
     return &thread->obj;
 }
@@ -245,7 +229,7 @@ void th_free_obj(zend_object *obj)
 {
     thread_obj_t *thread = (thread_obj_t *)((char *)obj - obj->handlers->offset);
 
-    thread_destroy(thread);
+    zend_hash_index_del(&PHT_ZG(child_threads), (zend_ulong)thread);
 }
 
 ZEND_BEGIN_ARG_INFO_EX(Thread_add_task_arginfo, 0, 0, 1)

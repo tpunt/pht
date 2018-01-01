@@ -59,5 +59,6 @@ typedef struct _threads_t {
 
 void thread_ce_init(void);
 void pht_thread_mshutdown(void);
+void thread_join_destroy(zval *zthread);
 
 #endif
