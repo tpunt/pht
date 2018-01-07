@@ -197,6 +197,10 @@ static zend_arg_info *copy_function_arg_info(zend_arg_info *old_arg_info, uint32
         }
     }
 
+    if (fn_flags & ZEND_ACC_HAS_RETURN_TYPE) {
+        ++new_arg_info;
+    }
+
     return new_arg_info;
 }
 
