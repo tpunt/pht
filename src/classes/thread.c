@@ -265,7 +265,7 @@ PHP_METHOD(Thread, addTask)
                 zend_throw_error(NULL, "Failed to serialise argument %d of Thread::addTask()", i + 1);
 
                 for (int i2 = 0; i2 < i; ++i2) {
-                    pht_entry_delete_value(task->class_ctor_args + i);
+                    pht_entry_delete_value(task->class_ctor_args + i2);
                 }
 
                 free(task->class_ctor_args);
