@@ -1,5 +1,5 @@
 --TEST--
-Testing the HT data structure implementation
+Testing the Queue data structure implementation
 --FILE--
 <?php
 

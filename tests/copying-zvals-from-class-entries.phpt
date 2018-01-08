@@ -1,5 +1,6 @@
 --TEST--
-Ensure correct copying of local static variables.
+Ensure zvals are correctly copied on a class entry. This includes default
+property and static property tables, along with class constants.
 --FILE--
 <?php
 
