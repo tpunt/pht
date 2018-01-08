@@ -26,6 +26,11 @@ class Test implements Runnable
     public function run()
     {
         var_dump(Test2::A, Test2::$a, (new Test2)->b);
+        try {
+            var_dump(Test2::B);
+        } catch (Error $e) {
+            var_dump($e->getMessage());
+        }
     }
 }
 
@@ -62,3 +67,4 @@ array(2) {
     string(1) "c"
   }
 }
+string(28) "Undefined class constant 'B'"

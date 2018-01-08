@@ -438,6 +438,7 @@ static void copy_class_constants(HashTable *new_constants_table, HashTable *old_
 static void copy_class_constant(zend_class_constant *new_constant, zend_class_constant *old_constant, zend_class_entry *new_ce)
 {
     PHT_ZVAL_DUP(&new_constant->value, &old_constant->value);
+    new_constant->value.u2 = old_constant->value.u2;
 
     if (old_constant->doc_comment) {
         new_constant->doc_comment = zend_string_dup(old_constant->doc_comment, 0); // not interned
