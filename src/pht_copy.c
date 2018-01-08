@@ -46,8 +46,7 @@ static zend_trait_precedence **copy_trait_precedences(zend_trait_precedence **ol
 static zend_trait_alias **copy_trait_aliases(zend_trait_alias **old_tas);
 static zend_class_entry **copy_traits(zend_class_entry **old_traits, uint32_t num_traits);
 static zend_class_entry **copy_interfaces(zend_class_entry **old_interfaces, uint32_t num_interfaces);
-static zval *copy_def_prop_table(zval *old_default_prop_table, int prop_count);
-static zval *copy_def_statmem_table(zval *old_default_static_members_table, int member_count);
+static zval *copy_zval_table(zval *old_table, int count);
 static zval *copy_statmem_table(zval *old_static_members_table, int member_count);
 static zend_function *set_function_from_name(HashTable function_table, char *name, size_t length);
 static void copy_iterator_functions(zend_class_iterator_funcs *new_if, zend_class_iterator_funcs old_if);
@@ -521,8 +520,8 @@ static zend_class_entry *create_new_ce(zend_class_entry *old_ce)
 
     new_ce->default_properties_count = old_ce->default_properties_count;
     new_ce->default_static_members_count = old_ce->default_static_members_count;
-    new_ce->default_properties_table = copy_def_prop_table(old_ce->default_properties_table, old_ce->default_properties_count);
-    new_ce->default_static_members_table = copy_def_statmem_table(old_ce->default_static_members_table, old_ce->default_static_members_count);
+    new_ce->default_properties_table = copy_zval_table(old_ce->default_properties_table, old_ce->default_properties_count);
+    new_ce->default_static_members_table = copy_zval_table(old_ce->default_static_members_table, old_ce->default_static_members_count);
     new_ce->static_members_table = copy_statmem_table(old_ce->default_static_members_table, old_ce->default_static_members_count);
 
     copy_functions(&new_ce->function_table, &old_ce->function_table, new_ce);
@@ -725,53 +724,32 @@ static zend_class_entry **copy_interfaces(zend_class_entry **old_interfaces, uin
     return new_interfaces;
 }
 
-static zval *copy_def_prop_table(zval *old_default_prop_table, int prop_count)
+static zval *copy_zval_table(zval *old_table, int count)
 {
-    if (old_default_prop_table == NULL) {
+    if (old_table == NULL) {
         return NULL;
     }
 
-    zval *new_default_prop_table = emalloc(sizeof(zval) * prop_count);
+    zval *new_table = emalloc(sizeof(zval) * count);
 
-    memcpy(new_default_prop_table, old_default_prop_table, sizeof(zval) * prop_count);
+    memcpy(new_table, old_table, sizeof(zval) * count);
 
-    // @todo
-    for (int i = 0; i < prop_count; ++i) {
-        if (Z_REFCOUNTED(old_default_prop_table[i])) {
-            switch (Z_TYPE(old_default_prop_table[i])) {
+    for (int i = 0; i < count; ++i) {
+        if (Z_REFCOUNTED(old_table[i])) {
+            switch (Z_TYPE(old_table[i])) {
                 case IS_STRING:
-                    ZVAL_NEW_STR(new_default_prop_table + i, zend_string_dup(Z_STR(old_default_prop_table[i]), 0));
+                    ZVAL_NEW_STR(new_table + i, zend_string_dup(Z_STR(old_table[i]), 0));
                     break;
                 case IS_ARRAY:
-                    ZVAL_ARR(new_default_prop_table + i, pht_zend_array_dup(Z_ARR(old_default_prop_table[i])));
+                    ZVAL_ARR(new_table + i, pht_zend_array_dup(Z_ARR(old_table[i])));
                     break;
                 default:
-                    printf("Unknown type: %d\n", Z_TYPE(old_default_prop_table[i]));
+                    assert(0);
             }
         }
     }
 
-    return new_default_prop_table;
-}
-
-static zval *copy_def_statmem_table(zval *old_def_static_members_table, int member_count)
-{
-    if (old_def_static_members_table == NULL) {
-        return NULL;
-    }
-
-    zval *new_def_static_members_table = emalloc(sizeof(zval) * member_count);
-
-    memcpy(new_def_static_members_table, old_def_static_members_table, sizeof(zval) * member_count);
-
-    // @todo
-    // for (i = 0; i < member_count; i++) {
-    //     if (Z_REFCOUNTED(new_def_static_members_table[i])) {
-    //         pthreads_store_separate(&new_def_static_members_table[i], &old_def_static_members_table[i], 1);
-    //     }
-    // }
-
-    return new_def_static_members_table;
+    return new_table;
 }
 
 static zval *copy_statmem_table(zval *old_static_members_table, int member_count)
