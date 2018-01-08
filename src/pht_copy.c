@@ -341,7 +341,7 @@ static void copy_zend_op_array(zend_op_array *new_op_array, zend_op_array *old_o
     for (int i = 0; i < old_op_array->last_literal; ++i) {
         switch (Z_TYPE(old_op_array->literals[i])) {
             case IS_ARRAY:
-                ZVAL_DUP(new_op_array->literals + i, old_op_array->literals + i);
+                ZVAL_ARR(new_op_array->literals + i, pht_zend_array_dup(Z_ARR(old_op_array->literals[i])));
                 break;
 #if PHP_VERSION_ID < 70300
             case IS_CONSTANT: // constant names are interned, so nothing to do
@@ -438,7 +438,7 @@ static void copy_class_constants(HashTable *new_constants_table, HashTable *old_
 
 static void copy_class_constant(zend_class_constant *new_constant, zend_class_constant *old_constant, zend_class_entry *new_ce)
 {
-    ZVAL_DUP(&new_constant->value, &old_constant->value);
+    PHT_ZVAL_DUP(&new_constant->value, &old_constant->value);
 
     if (old_constant->doc_comment) {
         new_constant->doc_comment = zend_string_dup(old_constant->doc_comment, 0); // not interned
@@ -451,7 +451,7 @@ static void copy_class_constant(zend_class_constant *new_constant, zend_class_co
 
 static void copy_constant(zend_constant *new_constant, zend_constant *old_constant)
 {
-    ZVAL_DUP(&new_constant->value, &old_constant->value);
+    PHT_ZVAL_DUP(&new_constant->value, &old_constant->value);
 
     new_constant->name = old_constant->name;
     new_constant->flags = old_constant->flags;

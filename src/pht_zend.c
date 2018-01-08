@@ -311,3 +311,24 @@ ZEND_API zend_ast *pht_zend_ast_copy(zend_ast *ast)
 		return new;
 	}
 }
+
+/*
+The following is taken from Zend/zend_variables.c and changes the way arrays and
+constant AST types are copied. This internal function is used for PHT_ZVAL_DUP
+(defined in pht_zend.h), which is a thread-safe version of ZVAL_DUP.
+*/
+ZEND_API void ZEND_FASTCALL _pht_zval_copy_ctor_func(zval *zvalue ZEND_FILE_LINE_DC)
+{
+	if (EXPECTED(Z_TYPE_P(zvalue) == IS_ARRAY)) {
+		ZVAL_ARR(zvalue, pht_zend_array_dup(Z_ARRVAL_P(zvalue))); // changed line
+	} else if (EXPECTED(Z_TYPE_P(zvalue) == IS_STRING)) {
+		CHECK_ZVAL_STRING_REL(Z_STR_P(zvalue));
+		ZVAL_NEW_STR(zvalue, zend_string_dup(Z_STR_P(zvalue), 0));
+	} else if (EXPECTED(Z_TYPE_P(zvalue) == IS_CONSTANT)) {
+		CHECK_ZVAL_STRING_REL(Z_STR_P(zvalue));
+		Z_STR_P(zvalue) = zend_string_dup(Z_STR_P(zvalue), 0);
+	} else if (EXPECTED(Z_TYPE_P(zvalue) == IS_CONSTANT_AST)) {
+		zend_ast *copy = pht_zend_ast_copy(Z_ASTVAL_P(zvalue)); // changed line
+		ZVAL_NEW_AST(zvalue, copy);
+	}
+}
