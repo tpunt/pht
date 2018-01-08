@@ -382,12 +382,6 @@ int pht_convert_zval_to_entry(pht_entry_t *e, zval *value)
     return 1;
 }
 
-void pht_entry_update(pht_entry_t *entry, zval *value)
-{
-    pht_entry_delete_value(entry);
-    pht_convert_zval_to_entry(entry, value);
-}
-
 pht_entry_t *create_new_entry(zval *value)
 {
     pht_entry_t *e = malloc(sizeof(pht_entry_t));
