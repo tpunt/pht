@@ -261,7 +261,16 @@ PHP_METHOD(Thread, addTask)
         task->class_ctor_args = malloc(sizeof(pht_entry_t) * argc);
 
         for (int i = 0; i < argc; ++i) {
-            pht_convert_zval_to_entry(task->class_ctor_args + i, args + i);
+            if (!pht_convert_zval_to_entry(task->class_ctor_args + i, args + i)) {
+                zend_throw_error(NULL, "Failed to serialise argument %d of Thread::addTask()", i + 1);
+
+                for (int i2 = 0; i2 < i; ++i2) {
+                    pht_entry_delete_value(task->class_ctor_args + i);
+                }
+
+                free(task->class_ctor_args);
+                return;
+            }
         }
     } else {
         task->class_ctor_args = NULL;
