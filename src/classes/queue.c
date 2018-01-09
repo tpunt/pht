@@ -22,6 +22,7 @@
 
 #include "php_pht.h"
 #include "src/pht_entry.h"
+#include "src/pht_debug.h"
 #include "src/classes/queue.h"
 
 extern zend_class_entry *Threaded_ce;
