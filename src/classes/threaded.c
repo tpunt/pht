@@ -27,6 +27,17 @@ zend_function_entry Threaded_methods[] = {
     PHP_FE_END
 };
 
+int threaded_interface_gets_implemented(zend_class_entry *interface, zend_class_entry *implementor)
+{
+    if (implementor->type == ZEND_INTERNAL_CLASS) {
+        return SUCCESS;
+    }
+
+    zend_throw_error(NULL, "The Threaded interface cannot be implemented by userland classes");
+
+    return FAILURE;
+}
+
 void threaded_ce_init(void)
 {
     zend_class_entry ce;
@@ -34,4 +45,5 @@ void threaded_ce_init(void)
 
     INIT_CLASS_ENTRY(ce, "Threaded", Threaded_methods);
     Threaded_ce = zend_register_internal_interface(&ce);
+    Threaded_ce->interface_gets_implemented = threaded_interface_gets_implemented;
 }
