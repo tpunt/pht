@@ -47,7 +47,6 @@ static zend_trait_alias **copy_trait_aliases(zend_trait_alias **old_tas);
 static zend_class_entry **copy_traits(zend_class_entry **old_traits, uint32_t num_traits);
 static zend_class_entry **copy_interfaces(zend_class_entry **old_interfaces, uint32_t num_interfaces);
 static zval *copy_zval_table(zval *old_table, int count);
-static zval *copy_statmem_table(zval *old_static_members_table, int member_count);
 static zend_function *set_function_from_name(HashTable function_table, char *name, size_t length);
 static void copy_iterator_functions(zend_class_iterator_funcs *new_if, zend_class_iterator_funcs old_if);
 static void copy_doc_comment(zend_string **new_doc_comment, zend_string *old_doc_comment);
@@ -523,7 +522,7 @@ static zend_class_entry *create_new_ce(zend_class_entry *old_ce)
     new_ce->default_static_members_count = old_ce->default_static_members_count;
     new_ce->default_properties_table = copy_zval_table(old_ce->default_properties_table, old_ce->default_properties_count);
     new_ce->default_static_members_table = copy_zval_table(old_ce->default_static_members_table, old_ce->default_static_members_count);
-    new_ce->static_members_table = copy_statmem_table(old_ce->default_static_members_table, old_ce->default_static_members_count);
+    new_ce->static_members_table = copy_zval_table(old_ce->default_static_members_table, old_ce->default_static_members_count);
 
     copy_functions(&new_ce->function_table, &old_ce->function_table, new_ce);
     copy_properties_info(&new_ce->properties_info, &old_ce->properties_info, new_ce);
@@ -751,19 +750,6 @@ static zval *copy_zval_table(zval *old_table, int count)
     }
 
     return new_table;
-}
-
-static zval *copy_statmem_table(zval *old_static_members_table, int member_count)
-{
-    if (old_static_members_table == NULL) {
-        return NULL;
-    }
-
-    zval *new_static_members_table = emalloc(sizeof(zval) * member_count);
-
-    memcpy(new_static_members_table, old_static_members_table, sizeof(zval) * member_count);
-
-    return new_static_members_table;
 }
 
 static zend_function *set_function_from_name(HashTable function_table, char *name, size_t length)
