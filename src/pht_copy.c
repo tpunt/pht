@@ -743,6 +743,9 @@ static zval *copy_zval_table(zval *old_table, int count)
                 case IS_ARRAY:
                     ZVAL_ARR(new_table + i, pht_zend_array_dup(Z_ARR(old_table[i])));
                     break;
+                case IS_OBJECT: // @todo a temporary solution
+                    ZVAL_NULL(new_table + i);
+                    break;
                 default:
                     assert(0);
             }
