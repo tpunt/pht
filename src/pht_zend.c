@@ -18,6 +18,8 @@
 
 #include <Zend/zend_API.h>
 
+#include "src/pht_zend.h"
+
 /*
 This file contains copied pieces of functionality from ZE. Such pieces of
 functionality have usually required minor tweaks in order to work safely with
@@ -26,8 +28,8 @@ this extension (namely with respect to performing hard copies of zvals).
 
 /*
 The following is taken from Zend/zend_hash.c and changes the copying of array
-values to use ZVAL_DUP rather than ZVAL_COPY_VALUE (as well as performing a hard
-copy of string keys).
+values to use PHT_ZVAL_DUP rather than ZVAL_COPY_VALUE (as well as performing a
+hard copy of string keys).
 */
 static const uint32_t uninitialized_bucket[-HT_MIN_MASK] =
 	{HT_INVALID_IDX, HT_INVALID_IDX};
@@ -103,7 +105,7 @@ static zend_always_inline int pht_zend_array_dup_element(HashTable *source, Hash
 			Z_ADDREF_P(data);
 		}
 	} while (0);*/
-	ZVAL_DUP(&q->val, data); // Changed line here (from ZVAL_COPY_VALUE)
+	PHT_ZVAL_DUP(&q->val, data); // Changed line here (from ZVAL_COPY_VALUE)
 
 	q->h = p->h;
 	if (packed) {
@@ -286,7 +288,7 @@ ZEND_API zend_ast *pht_zend_ast_copy(zend_ast *ast)
 		zend_ast_zval *new = emalloc(sizeof(zend_ast_zval));
 		new->kind = ZEND_AST_ZVAL;
 		new->attr = ast->attr;
-		ZVAL_DUP(&new->val, zend_ast_get_zval(ast)); // Changed line (from ZVAL_COPY)
+		PHT_ZVAL_DUP(&new->val, zend_ast_get_zval(ast)); // Changed line (from ZVAL_COPY)
 		return (zend_ast *) new;
 	} else if (zend_ast_is_list(ast)) {
 		zend_ast_list *list = zend_ast_get_list(ast);
