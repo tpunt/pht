@@ -289,8 +289,9 @@ static HashTable *copy_static_variables(HashTable *old_static_variables)
             }
 
             zend_hash_add(new_static_variables, new_key, &copy);
-            zend_string_release(new_key);
         }
+
+        zend_string_release(new_key);
     } ZEND_HASH_FOREACH_END();
 
     return new_static_variables;
