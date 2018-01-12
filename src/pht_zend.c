@@ -26,9 +26,8 @@ this extension (namely with respect to performing hard copies of zvals).
 
 /*
 The following is taken from Zend/zend_hash.c and changes the copying of array
-values to use ZVAL_DUP rather than ZVAL_COPY_VALUE.
-
-@todo apply to array keys to?
+values to use ZVAL_DUP rather than ZVAL_COPY_VALUE (as well as performing a hard
+copy of string keys).
 */
 static const uint32_t uninitialized_bucket[-HT_MIN_MASK] =
 	{HT_INVALID_IDX, HT_INVALID_IDX};
@@ -114,7 +113,7 @@ static zend_always_inline int pht_zend_array_dup_element(HashTable *source, Hash
 
 		q->key = p->key;
 		if (!static_keys && q->key) {
-			zend_string_addref(q->key);
+			q->key = zend_string_dup(q->key, 0); // Changed line here (duplicate the string key)
 		}
 
 		nIndex = q->h | target->nTableMask;
