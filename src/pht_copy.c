@@ -506,7 +506,7 @@ static zend_class_entry *copy_ce(zend_class_entry *old_ce)
 
 static zend_class_entry *create_new_ce(zend_class_entry *old_ce)
 {
-    zend_class_entry *new_ce = ecalloc(sizeof(zend_class_entry), 1);
+    zend_class_entry *new_ce = zend_arena_calloc(&CG(arena), 1, sizeof(zend_class_entry));
 
     zend_initialize_class_data(new_ce, 1);
 
