@@ -130,7 +130,7 @@ void hto_write_dimension(zval *zobj, zval *offset, zval *value)
         return;
     }
 
-    pht_entry_t *entry = create_new_entry(value);
+    pht_entry_t *entry = pht_create_entry_from_zval(value);
 
     if (!entry) {
         zend_throw_error(NULL, "Failed to serialise the value");

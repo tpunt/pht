@@ -119,7 +119,7 @@ PHP_METHOD(Queue, push)
         Z_PARAM_ZVAL(value)
     ZEND_PARSE_PARAMETERS_END();
 
-    pht_entry_t *entry = create_new_entry(value);
+    pht_entry_t *entry = pht_create_entry_from_zval(value);
 
     if (!entry) {
         zend_throw_error(NULL, "Failed to serialise the value");

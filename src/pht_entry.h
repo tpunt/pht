@@ -61,6 +61,6 @@ void pht_convert_entry_to_zval(zval *value, pht_entry_t *s);
 int pht_convert_zval_to_entry(pht_entry_t *e, zval *value);
 void pht_entry_delete(void *entry_void);
 void pht_entry_delete_value(pht_entry_t *entry);
-pht_entry_t *create_new_entry(zval *value);
+pht_entry_t *pht_create_entry_from_zval(zval *value);
 
 #endif
