@@ -32,7 +32,7 @@ static zend_try_catch_element *copy_zend_try_catch_element(zend_try_catch_elemen
 static HashTable *copy_static_variables(HashTable *old_static_variables);
 static void copy_zend_op_array(zend_op_array *new_op_array, zend_op_array *old_op_array, zend_class_entry *new_ce);
 static void copy_ini_directives(HashTable *new_ini_directives, HashTable *old_ini_directives);
-static void copy_included_files(HashTable *new_included_files, HashTable old_included_files);
+static void copy_included_files(HashTable *new_included_files, HashTable *old_included_files);
 static void copy_global_constants(HashTable *new_constants, HashTable *old_constants);
 static void copy_class_constants(HashTable *new_constants_table, HashTable *old_constants_table, zend_class_entry *new_ce);
 static void copy_class_constant(zend_class_constant *new_constant, zend_class_constant *old_constant, zend_class_entry *new_ce);
@@ -67,7 +67,7 @@ static void copy_executor_globals(void)
     // symtable_cache_ptr
 
     // symbol_table
-    copy_included_files(&EG(included_files), PHT_EG(PHT_ZG(parent_thread_ls), included_files));
+    copy_included_files(&EG(included_files), &PHT_EG(PHT_ZG(parent_thread_ls), included_files));
 
     // bailout
 
@@ -382,11 +382,11 @@ static void copy_ini_directives(HashTable *new_ini_directives, HashTable *old_in
     // if there are changes, then update ...
 }
 
-static void copy_included_files(HashTable *new_included_files, HashTable old_included_files)
+static void copy_included_files(HashTable *new_included_files, HashTable *old_included_files)
 {
     zend_string *filename;
 
-    ZEND_HASH_FOREACH_STR_KEY(&old_included_files, filename) {
+    ZEND_HASH_FOREACH_STR_KEY(old_included_files, filename) {
         zend_string *new_filename = zend_string_dup(filename, 0);
 
         zend_hash_add_empty_element(new_included_files, new_filename);
