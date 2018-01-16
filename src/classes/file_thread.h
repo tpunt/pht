@@ -2,7 +2,7 @@
   +----------------------------------------------------------------------+
   | PHP Version 7                                                        |
   +----------------------------------------------------------------------+
-  | Copyright (c) 1997-2016 The PHP Group                                |
+  | Copyright (c) 1997-2017 The PHP Group                                |
   +----------------------------------------------------------------------+
   | This source file is subject to version 3.01 of the PHP license,      |
   | that is bundled with this package in the file LICENSE, and is        |
@@ -16,37 +16,9 @@
   +----------------------------------------------------------------------+
 */
 
-#include <stdlib.h>
-#include <string.h>
+#ifndef PHT_FILE_THREAD_CLASS_H
+#define PHT_FILE_THREAD_CLASS_H
 
-#include "src/pht_general.h"
+void file_thread_ce_init(void);
 
-pht_string_t *pht_str_new(char *s, int len)
-{
-    pht_string_t *pstr = malloc(sizeof(pht_string_t));
-
-    PHT_STRL_P(pstr) = len;
-    PHT_STRV_P(pstr) = malloc(len + 1);
-    memcpy(PHT_STRV_P(pstr), s, len);
-    PHT_STRV_P(pstr)[len] = '\0';
-
-    return pstr;
-}
-
-void pht_str_update(pht_string_t *str, char *s, int len)
-{
-    PHT_STRL_P(str) = len;
-    PHT_STRV_P(str) = malloc(len + 1);
-    memcpy(PHT_STRV_P(str), s, len);
-    PHT_STRV_P(str)[len] = '\0';
-}
-
-int pht_str_eq(pht_string_t *phtstr1, pht_string_t *phtstr2)
-{
-    return PHT_STRL_P(phtstr1) == PHT_STRL_P(phtstr2) && !strncmp(PHT_STRV_P(phtstr1), PHT_STRV_P(phtstr2), PHT_STRL_P(phtstr2));
-}
-
-void pht_str_free(pht_string_t *str)
-{
-    free(PHT_STRV_P(str));
-}
+#endif

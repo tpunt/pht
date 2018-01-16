@@ -24,12 +24,14 @@
 #include <ext/standard/info.h>
 
 #include "php_pht.h"
+#include "src/pht_thread.h"
 #include "src/classes/thread.h"
 #include "src/classes/threaded.h"
 #include "src/classes/runnable.h"
 #include "src/classes/queue.h"
 #include "src/classes/hashtable.h"
 #include "src/classes/vector.h"
+#include "src/classes/file_thread.h"
 
 ZEND_DECLARE_MODULE_GLOBALS(pht)
 
@@ -41,14 +43,13 @@ PHP_MINIT_FUNCTION(pht)
     queue_ce_init();
     hashtable_ce_init();
     vector_ce_init();
+    file_thread_ce_init();
 
     return SUCCESS;
 }
 
 PHP_MSHUTDOWN_FUNCTION(pht)
 {
-    pht_thread_mshutdown();
-
     return SUCCESS;
 }
 

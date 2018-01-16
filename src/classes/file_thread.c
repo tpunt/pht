@@ -16,46 +16,44 @@
   +----------------------------------------------------------------------+
 */
 
-#include <main/SAPI.h>
+#include <main/php.h>
+#include <Zend/zend_API.h>
 
 #include "php_pht.h"
-#include "src/pht_debug.h"
 #include "src/pht_thread.h"
-#include "src/classes/thread.h"
+#include "src/classes/file_thread.h"
 
-extern zend_class_entry *Runnable_ce;
+zend_object_handlers file_thread_handlers;
+zend_class_entry *FileThread_ce;
 
-zend_object_handlers thread_handlers;
-zend_class_entry *Thread_ce;
-
-static zend_object *thread_ctor(zend_class_entry *entry)
+static zend_object *file_thread_ctor(zend_class_entry *entry)
 {
     thread_obj_t *thread = ecalloc(1, sizeof(thread_obj_t) + zend_object_properties_size(entry));
 
-    thread_init(thread, CLASS_THREAD);
+    thread_init(thread, FILE_THREAD);
 
     zend_object_std_init(&thread->obj, entry);
     object_properties_init(&thread->obj, entry);
 
-    thread->obj.handlers = &thread_handlers;
+    thread->obj.handlers = &file_thread_handlers;
 
     zend_hash_index_add_ptr(&PHT_ZG(child_threads), (zend_ulong)thread, thread);
 
     return &thread->obj;
 }
 
-ZEND_BEGIN_ARG_INFO_EX(Thread_add_task_arginfo, 0, 0, 1)
-    ZEND_ARG_INFO(0, class_name)
+ZEND_BEGIN_ARG_INFO_EX(FileThread___construct_arginfo, 0, 0, 1)
+ZEND_ARG_INFO(0, file_name)
 ZEND_END_ARG_INFO()
 
-PHP_METHOD(Thread, addTask)
+PHP_METHOD(FileThread, __construct)
 {
-    zend_class_entry *ce = Runnable_ce;
+    zend_string *file_name;
     zval *args;
     int argc = 0;
 
     ZEND_PARSE_PARAMETERS_START(1, -1)
-        Z_PARAM_CLASS(ce)
+        Z_PARAM_STR(file_name)
         Z_PARAM_VARIADIC('*', args, argc)
     ZEND_PARSE_PARAMETERS_END();
 
@@ -66,7 +64,7 @@ PHP_METHOD(Thread, addTask)
     thread_obj_t *thread = (thread_obj_t *)((char *)Z_OBJ(EX(This)) - Z_OBJ(EX(This))->handlers->offset);
     task_t *task = malloc(sizeof(task_t));
 
-    pht_str_update(&task->class_name, ZSTR_VAL(ce->name), ZSTR_LEN(ce->name));
+    pht_str_update(&task->class_name, ZSTR_VAL(file_name), ZSTR_LEN(file_name));
     task->class_ctor_argc = argc;
 
     if (argc) {
@@ -91,10 +89,10 @@ PHP_METHOD(Thread, addTask)
     pht_queue_push(&thread->tasks, task);
 }
 
-ZEND_BEGIN_ARG_INFO_EX(Thread_start_arginfo, 0, 0, 0)
+ZEND_BEGIN_ARG_INFO_EX(FileThread_start_arginfo, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
-PHP_METHOD(Thread, start)
+PHP_METHOD(FileThread, start)
 {
     thread_obj_t *thread = (thread_obj_t *)((char *)Z_OBJ(EX(This)) - Z_OBJ(EX(This))->handlers->offset);
 
@@ -105,10 +103,10 @@ PHP_METHOD(Thread, start)
     pthread_create((pthread_t *)thread, NULL, (void *)worker_function, thread);
 }
 
-ZEND_BEGIN_ARG_INFO_EX(Thread_join_arginfo, 0, 0, 0)
+ZEND_BEGIN_ARG_INFO_EX(FileThread_join_arginfo, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
-PHP_METHOD(Thread, join)
+PHP_METHOD(FileThread, join)
 {
     thread_obj_t *thread = (thread_obj_t *)((char *)Z_OBJ(EX(This)) - Z_OBJ(EX(This))->handlers->offset);
 
@@ -121,39 +119,25 @@ PHP_METHOD(Thread, join)
     pthread_join(thread->thread, NULL);
 }
 
-ZEND_BEGIN_ARG_INFO_EX(Thread_task_count_arginfo, 0, 0, 0)
-ZEND_END_ARG_INFO()
-
-PHP_METHOD(Thread, taskCount)
-{
-    thread_obj_t *thread = (thread_obj_t *)((char *)Z_OBJ(EX(This)) - Z_OBJ(EX(This))->handlers->offset);
-
-    if (zend_parse_parameters_none() != SUCCESS) {
-        return;
-    }
-
-    RETVAL_LONG(thread->tasks.size);
-}
-
-zend_function_entry Thread_methods[] = {
-    PHP_ME(Thread, addTask, Thread_add_task_arginfo, ZEND_ACC_PUBLIC)
-    PHP_ME(Thread, start, Thread_start_arginfo, ZEND_ACC_PUBLIC)
-    PHP_ME(Thread, join, Thread_join_arginfo, ZEND_ACC_PUBLIC)
-    PHP_ME(Thread, taskCount, Thread_task_count_arginfo, ZEND_ACC_PUBLIC)
+zend_function_entry FileThread_methods[] = {
+    PHP_ME(FileThread, __construct, FileThread___construct_arginfo, ZEND_ACC_PUBLIC)
+    PHP_ME(FileThread, start, FileThread_start_arginfo, ZEND_ACC_PUBLIC)
+    PHP_ME(FileThread, join, FileThread_join_arginfo, ZEND_ACC_PUBLIC)
     PHP_FE_END
 };
 
-void thread_ce_init(void)
+void file_thread_ce_init(void)
 {
     zend_class_entry ce;
     zend_object_handlers *zh = zend_get_std_object_handlers();
 
-    INIT_CLASS_ENTRY(ce, "Thread", Thread_methods);
-    Thread_ce = zend_register_internal_class(&ce);
-    Thread_ce->create_object = thread_ctor;
+    INIT_CLASS_ENTRY(ce, "FileThread", FileThread_methods);
+    FileThread_ce = zend_register_internal_class(&ce);
+    FileThread_ce->create_object = file_thread_ctor;
+    FileThread_ce->ce_flags |= ZEND_ACC_FINAL;
 
-    memcpy(&thread_handlers, zh, sizeof(zend_object_handlers));
+    memcpy(&file_thread_handlers, zh, sizeof(zend_object_handlers));
 
-    thread_handlers.offset = XtOffsetOf(thread_obj_t, obj);
-    thread_handlers.free_obj = th_free_obj;
+    file_thread_handlers.offset = XtOffsetOf(thread_obj_t, obj);
+    file_thread_handlers.free_obj = th_free_obj;
 }

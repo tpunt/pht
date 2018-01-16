@@ -73,7 +73,11 @@ void qo_free_obj(zend_object *obj)
     --qo->qoi->refcount;
     pthread_mutex_unlock(&qo->qoi->lock);
 
-    zend_hash_index_del(&PHT_ZG(itc_ds), (zend_ulong)qo->qoi);
+    // We don't remove the object from PHT_ZG(itc_ds), as this causes problems
+    // with file threads (due to RINIT being invoked before zend_objects_store_free_object_storage,
+    // causing the itc_ds HT to be destroyed before this object's function has
+    // been invoked.
+    // zend_hash_index_del(&PHT_ZG(itc_ds), (zend_ulong)qo->qoi);
 
     if (!qo->qoi->refcount) {
         qoi_free(qo->qoi);

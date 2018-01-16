@@ -16,9 +16,49 @@
   +----------------------------------------------------------------------+
 */
 
-#ifndef PHT_THREAD_CLASS_H
-#define PHT_THREAD_CLASS_H
+#ifndef PHT_THREAD_H
+#define PHT_THREAD_H
 
-void thread_ce_init(void);
+#include <main/php.h>
+#include <pthread.h>
+
+#include "src/pht_entry.h"
+#include "src/ds/pht_queue.h"
+
+typedef struct _task_t {
+    pht_string_t class_name;
+    int class_ctor_argc;
+    pht_entry_t *class_ctor_args;
+} task_t;
+
+typedef enum _status_t {
+    UNDER_CONSTRUCTION,
+    ACTIVE,
+    FINISHED,
+    DESTROYED // JOINED?
+} status_t;
+
+typedef enum _pht_thread_type_t {
+    CLASS_THREAD,
+    FILE_THREAD
+} pht_thread_type_t;
+
+typedef struct _thread_obj_t {
+    pthread_t thread; // must be first member
+    int tid; // use thread as global in tls instead?
+    zend_ulong id; // local storage ID used to fetch local storage data
+    pthread_mutex_t lock;
+    status_t status;
+    pht_thread_type_t type;
+    pht_queue_t tasks;
+    void*** ls; // pointer to local storage in TSRM
+    void*** parent_thread_ls;
+    zend_object obj;
+} thread_obj_t;
+
+void thread_init(thread_obj_t *thread, pht_thread_type_t type);
+void th_free_obj(zend_object *obj);
+void thread_join_destroy(zval *zthread);
+void *worker_function(thread_obj_t *thread);
 
 #endif
