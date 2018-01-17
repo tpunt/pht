@@ -464,14 +464,15 @@ static void copy_ces(HashTable *new_ces, HashTable *old_ces)
 
     ZEND_HASH_FOREACH_PTR(old_ces, old_ce) {
         if (old_ce->type == ZEND_USER_CLASS) {
-            // @todo why not pass in the EG ce table instead of the CG ce table?
-            // that way, we shouldn't need to lowercase the class names...
             zend_class_entry *new_ce = copy_ce(old_ce);
-            zend_string *new_ce_name = zend_string_tolower(old_ce->name);
 
-            zend_hash_add_ptr(new_ces, new_ce_name, new_ce);
+            if (new_ce) { // skip past anonymous classes
+                zend_string *new_ce_name = zend_string_tolower(old_ce->name); // ce names are interned
 
-            zend_string_release(new_ce_name); // @todo if the class name is all lower case, then this will probably segfault
+                zend_hash_add_ptr(new_ces, new_ce_name, new_ce);
+
+                zend_string_release(new_ce_name);
+            }
         }
     } ZEND_HASH_FOREACH_END();
 }
@@ -487,9 +488,7 @@ static zend_class_entry *copy_ce(zend_class_entry *old_ce)
     }
 
     if (old_ce->ce_flags & ZEND_ACC_ANON_CLASS) {
-        if (!(old_ce->ce_flags & ZEND_ACC_ANON_BOUND)) {
-            // return NULL;
-        }
+        return NULL;
     }
 
     zend_string *new_ce_name = zend_string_tolower(old_ce->name);
@@ -649,13 +648,13 @@ static zend_trait_precedence **copy_trait_precedences(zend_trait_precedence **ol
 
     uint32_t count = 0;
 
-    while (old_tps[++count]);
+    while (old_tps[count++]);
 
     zend_trait_precedence **new_tps = emalloc(sizeof(zend_trait_precedence *) * count);
 
     new_tps[--count] = NULL;
 
-    while (--count > -1) {
+    while (count--) {
         new_tps[count] = emalloc(sizeof(zend_trait_precedence));
         new_tps[count]->trait_method = copy_trait_method_reference(old_tps[count]->trait_method);
 
@@ -679,13 +678,13 @@ static zend_trait_alias **copy_trait_aliases(zend_trait_alias **old_tas)
 
     uint32_t count = 0;
 
-    while (old_tas[++count]);
+    while (old_tas[count++]);
 
     zend_trait_alias **new_tas = emalloc(sizeof(zend_trait_alias *) * count);
 
     new_tas[--count] = NULL;
 
-    while (--count > -1) {
+    while (count--) {
         new_tas[count] = emalloc(sizeof(zend_trait_alias));
         new_tas[count]->trait_method = copy_trait_method_reference(old_tas[count]->trait_method);
         new_tas[count]->alias = old_tas[count]->alias ? zend_string_dup(old_tas[count]->alias, 0) : NULL;
