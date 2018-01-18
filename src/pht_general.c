@@ -21,14 +21,19 @@
 
 #include "src/pht_general.h"
 
+void pht_str_set_len(pht_string_t *pstr, int len)
+{
+    PHT_STRL_P(pstr) = len;
+    PHT_STRV_P(pstr) = malloc(len + 1);
+    PHT_STRV_P(pstr)[len] = '\0';
+}
+
 pht_string_t *pht_str_new(char *s, int len)
 {
     pht_string_t *pstr = malloc(sizeof(pht_string_t));
 
-    PHT_STRL_P(pstr) = len;
-    PHT_STRV_P(pstr) = malloc(len + 1);
+    pht_str_set_len(pstr, len);
     memcpy(PHT_STRV_P(pstr), s, len);
-    PHT_STRV_P(pstr)[len] = '\0';
 
     return pstr;
 }

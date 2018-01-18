@@ -2,11 +2,7 @@
 
 [$vector, $hashTable, $queue] = $_THREAD;
 
-var_dump(
-    $vector,
-    $hashTable,
-    $queue
-);
+var_dump($vector, $hashTable, $queue);
 
 $vector->lock();
 $vector[] = 1;

@@ -43,28 +43,40 @@ static zend_object *file_thread_ctor(zend_class_entry *entry)
 }
 
 ZEND_BEGIN_ARG_INFO_EX(FileThread___construct_arginfo, 0, 0, 1)
-ZEND_ARG_INFO(0, file_name)
+ZEND_ARG_INFO(0, filename)
 ZEND_END_ARG_INFO()
 
 PHP_METHOD(FileThread, __construct)
 {
-    zend_string *file_name;
+    zend_string *filename;
     zval *args;
     int argc = 0;
 
     ZEND_PARSE_PARAMETERS_START(1, -1)
-        Z_PARAM_STR(file_name)
+        Z_PARAM_STR(filename)
         Z_PARAM_VARIADIC('*', args, argc)
     ZEND_PARSE_PARAMETERS_END();
-
-    // By loading the class entry here, we ensure that it exists before
-    // asynchronously creating the underlying Runnable object. We can simply
-    // discard the ce here and use only the ce name now
 
     thread_obj_t *thread = (thread_obj_t *)((char *)Z_OBJ(EX(This)) - Z_OBJ(EX(This))->handlers->offset);
     task_t *task = malloc(sizeof(task_t));
 
-    pht_str_update(&task->class_name, ZSTR_VAL(file_name), ZSTR_LEN(file_name));
+    if (ZSTR_VAL(filename)[0] == '/') { // @todo Different for Windows...
+        pht_str_update(&task->class_name, ZSTR_VAL(filename), ZSTR_LEN(filename));
+    } else {
+        const char *current_filename = zend_get_executed_filename();
+        int i = strlen(current_filename) - 1;
+
+        while (i && current_filename[i] != '/') {
+            --i;
+        }
+
+        pht_str_set_len(&task->class_name, i + 1 + ZSTR_LEN(filename));
+
+        memcpy(PHT_STRV(task->class_name), current_filename, i);
+        PHT_STRV(task->class_name)[i] = '/';
+        memcpy(PHT_STRV(task->class_name) + i + 1, ZSTR_VAL(filename), ZSTR_LEN(filename));
+    }
+
     task->class_ctor_argc = argc;
 
     if (argc) {

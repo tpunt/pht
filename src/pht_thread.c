@@ -85,6 +85,8 @@ void handle_file_thread_task(thread_obj_t *thread)
     zfd.free_filename = 0;
     zfd.opened_path = NULL;
 
+    zend_compile_file = compile_file;
+
     php_execute_script(&zfd);
 }
 
@@ -224,11 +226,11 @@ void *worker_function(thread_obj_t *thread)
 
     if (thread->type != FILE_THREAD) {
         handle_thread_tasks(thread);
+
+        // @todo clean up all undone tasks
     } else {
         handle_file_thread_task(thread);
     }
-
-    // @todo clean up all undone tasks
 
     PG(report_memleaks) = 0;
 
