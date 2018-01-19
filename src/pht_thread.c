@@ -57,7 +57,10 @@ void th_free_obj(zend_object *obj)
 {
     thread_obj_t *thread = (thread_obj_t *)((char *)obj - obj->handlers->offset);
 
-    zend_hash_index_del(&PHT_ZG(child_threads), (zend_ulong)thread);
+    // We don't remove the object from PHT_ZG(child_threads), as this causes
+    // problems when ZE bails out due to an exception, causing the child_threads
+    // HT to be destroyed before this object's function has been invoked.
+    // zend_hash_index_del(&PHT_ZG(child_threads), (zend_ulong)thread);
 }
 
 void thread_join_destroy(zval *zthread)

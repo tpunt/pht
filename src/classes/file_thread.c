@@ -18,6 +18,7 @@
 
 #include <main/php.h>
 #include <Zend/zend_API.h>
+#include <Zend/zend_interfaces.h>
 
 #include "php_pht.h"
 #include "src/pht_thread.h"
@@ -161,6 +162,8 @@ void file_thread_ce_init(void)
     FileThread_ce = zend_register_internal_class(&ce);
     FileThread_ce->create_object = file_thread_ctor;
     FileThread_ce->ce_flags |= ZEND_ACC_FINAL;
+    FileThread_ce->serialize = zend_class_serialize_deny;
+    FileThread_ce->unserialize = zend_class_unserialize_deny;
 
     memcpy(&file_thread_handlers, zh, sizeof(zend_object_handlers));
 

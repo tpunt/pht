@@ -17,6 +17,7 @@
 */
 
 #include <main/SAPI.h>
+#include <Zend/zend_interfaces.h>
 
 #include "php_pht.h"
 #include "src/pht_debug.h"
@@ -151,6 +152,8 @@ void thread_ce_init(void)
     INIT_CLASS_ENTRY(ce, "Thread", Thread_methods);
     Thread_ce = zend_register_internal_class(&ce);
     Thread_ce->create_object = thread_ctor;
+    Thread_ce->serialize = zend_class_serialize_deny;
+    Thread_ce->unserialize = zend_class_unserialize_deny;
 
     memcpy(&thread_handlers, zh, sizeof(zend_object_handlers));
 
