@@ -77,6 +77,20 @@ PHP_METHOD(FileThread, __construct)
         memcpy(PHT_STRV(task->class_name) + i + 1, ZSTR_VAL(filename), ZSTR_LEN(filename));
     }
 
+    if (VCWD_ACCESS(PHT_STRV(task->class_name), F_OK) != 0) {
+        zend_throw_error(NULL, "The file '%s' does not exist", PHT_STRV(task->class_name));
+        free(task);
+        free(PHT_STRV(task->class_name));
+        return;
+    }
+
+    if (VCWD_ACCESS(PHT_STRV(task->class_name), R_OK) != 0) {
+        zend_throw_error(NULL, "The file '%s' is not readable", PHT_STRV(task->class_name));
+        free(task);
+        free(PHT_STRV(task->class_name));
+        return;
+    }
+
     task->class_ctor_argc = argc;
 
     if (argc) {
