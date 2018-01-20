@@ -320,7 +320,6 @@ int pht_convert_zval_to_entry(pht_entry_t *e, zval *value)
                     PHT_ENTRY_TYPE(e) = PHT_STORE_FUNC;
                     PHT_ENTRY_FUNC(e) = malloc(sizeof(zend_op_array));
                     memcpy(PHT_ENTRY_FUNC(e), zend_get_closure_method_def(value), sizeof(zend_op_array));
-                    Z_ADDREF_P(value);
                 } else if (instanceof_function(Z_OBJCE_P(value), Threaded_ce)) {
                     if (instanceof_function(Z_OBJCE_P(value), Queue_ce)) {
                         queue_obj_t *qo = (queue_obj_t *)((char *)Z_OBJ_P(value) - Z_OBJ_P(value)->handlers->offset);
