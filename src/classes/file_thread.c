@@ -61,8 +61,10 @@ PHP_METHOD(FileThread, __construct)
     thread_obj_t *thread = (thread_obj_t *)((char *)Z_OBJ(EX(This)) - Z_OBJ(EX(This))->handlers->offset);
     task_t *task = malloc(sizeof(task_t));
 
+    task->type = FILE_TASK;
+
     if (ZSTR_VAL(filename)[0] == '/') { // @todo Different for Windows...
-        pht_str_update(&task->class_name, ZSTR_VAL(filename), ZSTR_LEN(filename));
+        pht_str_update(&task->t.file.name, ZSTR_VAL(filename), ZSTR_LEN(filename));
     } else {
         const char *current_filename = zend_get_executed_filename();
         int i = strlen(current_filename) - 1;
@@ -71,46 +73,46 @@ PHP_METHOD(FileThread, __construct)
             --i;
         }
 
-        pht_str_set_len(&task->class_name, i + 1 + ZSTR_LEN(filename));
+        pht_str_set_len(&task->t.file.name, i + 1 + ZSTR_LEN(filename));
 
-        memcpy(PHT_STRV(task->class_name), current_filename, i);
-        PHT_STRV(task->class_name)[i] = '/';
-        memcpy(PHT_STRV(task->class_name) + i + 1, ZSTR_VAL(filename), ZSTR_LEN(filename));
+        memcpy(PHT_STRV(task->t.file.name), current_filename, i);
+        PHT_STRV(task->t.file.name)[i] = '/';
+        memcpy(PHT_STRV(task->t.file.name) + i + 1, ZSTR_VAL(filename), ZSTR_LEN(filename));
     }
 
-    if (VCWD_ACCESS(PHT_STRV(task->class_name), F_OK) != 0) {
-        zend_throw_error(NULL, "The file '%s' does not exist", PHT_STRV(task->class_name));
+    if (VCWD_ACCESS(PHT_STRV(task->t.file.name), F_OK) != 0) {
+        zend_throw_error(NULL, "The file '%s' does not exist", PHT_STRV(task->t.file.name));
         free(task);
-        free(PHT_STRV(task->class_name));
+        free(PHT_STRV(task->t.file.name));
         return;
     }
 
-    if (VCWD_ACCESS(PHT_STRV(task->class_name), R_OK) != 0) {
-        zend_throw_error(NULL, "The file '%s' is not readable", PHT_STRV(task->class_name));
+    if (VCWD_ACCESS(PHT_STRV(task->t.file.name), R_OK) != 0) {
+        zend_throw_error(NULL, "The file '%s' is not readable", PHT_STRV(task->t.file.name));
         free(task);
-        free(PHT_STRV(task->class_name));
+        free(PHT_STRV(task->t.file.name));
         return;
     }
 
-    task->class_ctor_argc = argc;
+    task->t.file.argc = argc;
 
     if (argc) {
-        task->class_ctor_args = malloc(sizeof(pht_entry_t) * argc);
+        task->t.file.args = malloc(sizeof(pht_entry_t) * argc);
 
         for (int i = 0; i < argc; ++i) {
-            if (!pht_convert_zval_to_entry(task->class_ctor_args + i, args + i)) {
+            if (!pht_convert_zval_to_entry(task->t.file.args + i, args + i)) {
                 zend_throw_error(NULL, "Failed to serialise argument %d of Thread::addTask()", i + 1);
 
                 for (int i2 = 0; i2 < i; ++i2) {
-                    pht_entry_delete_value(task->class_ctor_args + i2);
+                    pht_entry_delete_value(task->t.file.args + i2);
                 }
 
-                free(task->class_ctor_args);
+                free(task->t.file.args);
                 return;
             }
         }
     } else {
-        task->class_ctor_args = NULL;
+        task->t.file.args = NULL;
     }
 
     pht_queue_push(&thread->tasks, task);

@@ -18,6 +18,7 @@
 
 #include <main/SAPI.h>
 #include <Zend/zend_interfaces.h>
+#include <Zend/zend_closures.h>
 
 #include "php_pht.h"
 #include "src/pht_debug.h"
@@ -67,26 +68,103 @@ PHP_METHOD(Thread, addTask)
     thread_obj_t *thread = (thread_obj_t *)((char *)Z_OBJ(EX(This)) - Z_OBJ(EX(This))->handlers->offset);
     task_t *task = malloc(sizeof(task_t));
 
-    pht_str_update(&task->class_name, ZSTR_VAL(ce->name), ZSTR_LEN(ce->name));
-    task->class_ctor_argc = argc;
+    task->type = CLASS_TASK;
+    pht_str_update(&task->t.class.name, ZSTR_VAL(ce->name), ZSTR_LEN(ce->name));
+    task->t.class.ctor_argc = argc;
 
     if (argc) {
-        task->class_ctor_args = malloc(sizeof(pht_entry_t) * argc);
+        task->t.class.ctor_args = malloc(sizeof(pht_entry_t) * argc);
 
         for (int i = 0; i < argc; ++i) {
-            if (!pht_convert_zval_to_entry(task->class_ctor_args + i, args + i)) {
+            if (!pht_convert_zval_to_entry(task->t.class.ctor_args + i, args + i)) {
                 zend_throw_error(NULL, "Failed to serialise argument %d of Thread::addTask()", i + 1);
 
                 for (int i2 = 0; i2 < i; ++i2) {
-                    pht_entry_delete_value(task->class_ctor_args + i2);
+                    pht_entry_delete_value(task->t.class.ctor_args + i2);
                 }
 
-                free(task->class_ctor_args);
+                free(task->t.class.ctor_args);
                 return;
             }
         }
     } else {
-        task->class_ctor_args = NULL;
+        task->t.class.ctor_args = NULL;
+    }
+
+    pht_queue_push(&thread->tasks, task);
+}
+
+ZEND_BEGIN_ARG_INFO_EX(Thread_add_function_task_arginfo, 0, 0, 1)
+    ZEND_ARG_INFO(0, callable)
+ZEND_END_ARG_INFO()
+
+PHP_METHOD(Thread, addFunctionTask)
+{
+    zval *args, *zcallable;
+    int argc = 0;
+
+    ZEND_PARSE_PARAMETERS_START(1, -1)
+        Z_PARAM_ZVAL(zcallable)
+        Z_PARAM_VARIADIC('*', args, argc)
+    ZEND_PARSE_PARAMETERS_END();
+
+    if (!zend_is_callable(zcallable, 0, NULL)) {
+        zend_throw_error(NULL, "Invalid callable array given");
+        return;
+    }
+
+    thread_obj_t *thread = (thread_obj_t *)((char *)Z_OBJ(EX(This)) - Z_OBJ(EX(This))->handlers->offset);
+    task_t *task = malloc(sizeof(task_t));
+
+    while (Z_ISREF_P(zcallable)) {
+        zcallable = Z_REFVAL_P(zcallable);
+    }
+
+    if (Z_TYPE_P(zcallable) != IS_ARRAY) {
+        pht_convert_zval_to_entry(&task->t.function.fn, zcallable);
+    } else {
+        zval *obj = zend_hash_index_find(Z_ARR_P(zcallable), 0);
+
+        ZVAL_DEREF(obj);
+
+        if (Z_TYPE_P(obj) == IS_STRING) {
+            pht_convert_zval_to_entry(&task->t.function.fn, zcallable);
+        } else {
+            zval new_array, ce_name, *method = zend_hash_index_find(Z_ARR_P(zcallable), 1);
+
+            ZVAL_DEREF(method);
+            ZVAL_NEW_ARR(&new_array);
+            zend_hash_init(Z_ARR(new_array), 2, NULL, ZVAL_PTR_DTOR, 0);
+            ZVAL_STR(&ce_name, Z_OBJCE_P(obj)->name);
+
+            zend_hash_next_index_insert_new(Z_ARR(new_array), &ce_name);
+            zend_hash_next_index_insert_new(Z_ARR(new_array), method);
+
+            pht_convert_zval_to_entry(&task->t.function.fn, &new_array);
+            zval_dtor(&new_array);
+        }
+    }
+
+    task->type = FUNCTION_TASK;
+    task->t.function.argc = argc;
+
+    if (argc) {
+        task->t.function.args = malloc(sizeof(pht_entry_t) * argc);
+
+        for (int i = 0; i < argc; ++i) {
+            if (!pht_convert_zval_to_entry(task->t.function.args + i, args + i)) {
+                zend_throw_error(NULL, "Failed to serialise argument %d of Thread::addTask()", i + 1);
+
+                for (int i2 = 0; i2 < i; ++i2) {
+                    pht_entry_delete_value(task->t.function.args + i2);
+                }
+
+                free(task->t.function.args);
+                return;
+            }
+        }
+    } else {
+        task->t.function.args = NULL;
     }
 
     pht_queue_push(&thread->tasks, task);
@@ -138,6 +216,7 @@ PHP_METHOD(Thread, taskCount)
 
 zend_function_entry Thread_methods[] = {
     PHP_ME(Thread, addTask, Thread_add_task_arginfo, ZEND_ACC_PUBLIC)
+    PHP_ME(Thread, addFunctionTask, Thread_add_function_task_arginfo, ZEND_ACC_PUBLIC)
     PHP_ME(Thread, start, Thread_start_arginfo, ZEND_ACC_PUBLIC)
     PHP_ME(Thread, join, Thread_join_arginfo, ZEND_ACC_PUBLIC)
     PHP_ME(Thread, taskCount, Thread_task_count_arginfo, ZEND_ACC_PUBLIC)
