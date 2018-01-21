@@ -1,12 +1,25 @@
-# New Threading POC
+# Pht: A New Approach to Threading in PHP
 
-This is a POC implementation for a new approach to threading in PHP. As such, the implementation is very rough (leaky and incomplete) and I've only tested it against PHP 7.2. Everything and anything is subject to change still.
+This extension is a new approach to threading in PHP. Caution: everything and anything is still subject to change.
 
-The basic idea is that `Threaded` objects are abstracted away behind references to such objects. This means that when we would like to create a new thread, we now do something such as:
+Quick feature list:
+ - Classes, functions, and files may be threaded
+ - The inter-thread communication (ITC) data structures include: hash table, queue, vector
+ - Threads are always reusable for any number of tasks
+
+Requirements:
+ - A ZTS version of PHP 7.2. The master branch of php-src is not currently compatible
+ - A Unix-based OS. Windows is not currently supported
+
+## The Basics
+
+This approach to threading abstracts away the thread itself behind a dedicated object (either a `Thread` or `FileThread`).
+
+If we are dealing with a `Thread`, then we add tasks to the thread's task queue:
 ```php
 <?php
 
-class SomeClass implements Threaded
+class Task implements Runnable
 {
     public function run() {}
 }
@@ -14,24 +27,43 @@ class SomeClass implements Threaded
 $thread = new Thread();
 
 // Thread::addTask(string $className, mixed ...$constructorArgs)
-$thread->addTask(SomeClass::class);
+$thread->addTask(Task::class);
+$thread->addFunctionTask(function () {});
+
+$thread->start();
+$thread->join();
 ```
 
-By taking this approach, `Threaded` objects themselves no longer require their properties to be serialised. This is because we no longer need to pass around `Threaded` objects anymore, and so `Threaded` objects no longer need to be able to operate in multiple execution contexts.
+The class to be threaded will be instantiated inside of the new thread, where it will execute in isolation without being passed around between threads.
 
-This introduces a new problem: how can inter-thread communication (ITC) be performed? To solve this problem, I initially looked at a few inter-process communication (IPC) techniques. I first tried messages queues for ITC (with mutex locks hidden away internally), however after some playing around with it, the limited communication style of using queues only seemed inconvenient. Because I still liked the idea of using an explicit data structure for ITC (but simply wanted more flexibility with ITC data passing), I decided to implement other data structures and expose their mutex locks to the programmer for better control. Whilst this move increased complexity for the programmer, it also drastically increased the flexibility of what could be done by the programmer when using threads (which was what the overall aim of this extension was).
+If we are dealing with a `FileThread`, then we simply specify the name of the file we would like to thread:
+```php
+<?php
 
-The following data structures have been implemented so far:
- - Queue (e.g. for a producer-consumer approach)
- - Hash table (e.g. for data tracking)
+// FileThread::__construct(string $filename, mixed ...$globals);
+$fileThread = new FileThread('some_file.php', 1, 2, 3);
 
-These data structures can be passed around between threads safely, and manipulated by multiple threads using the mutex locks that have been packed in with the data structure.
+$fileThread->start();
+$fileThread->join();
+
+
+/* some_file.php */
+<?php
+
+[$one, $two, $three] = $_THREAD;
+```
+
+By keeping the threading contexts completely separate from one-another, we prevent the need to serialise the properties of threaded objects (a necessary evil if such objects had to operate in multiple threads, as seen in pthreads).
+
+Given the isolation of threaded contexts, we have a new problem: how can data be passed between threads? To solve this problem, threadable data structures have been implemented, where mutex locks have been exposed to the programmer for greater control over them. Whilst this has increased the complexity a bit for the programmer, it has also increased the flexibility, too.
+
+So far, the following data structures have been implemented: queue, hash table, vector. These data structures can be safely passed around between threads, and manipulated by multiple threads using the mutex locks that have been packed in with the data structure. They are reference-counted across threads, and so they do not need to be explicitly destroyed.
 
 For example, a `Queue` may be used as follows:
 ```php
 <?php
 
-class Task implements Threaded
+class Task implements Runnable
 {
     private $queue;
 
@@ -69,7 +101,11 @@ while ($expectedResultCount) {
 $thread->join();
 ```
 
-So with this approach to thread, only the given built-in data structures need to be safely passed around.
+So with this approach to threading, only the given built-in data structures need to be safely passed around between threads.
+
+This means that the serialisation points to be aware of are:
+ - The arguments being passed to `Thread::addTask()` and `FileThread::__construct()`
+ - The values being placed into the ITC-based data structures
 
 See also the [examples](https://github.com/tpunt/pht/tree/master/examples) folder.
 
@@ -77,136 +113,59 @@ See also the [examples](https://github.com/tpunt/pht/tree/master/examples) folde
 
 Quick overview:
 ```php
-interface Threaded
-{
-    public function run() void;
-}
-
-class Queue
-{
-    public function push(mixed $value) : void;
-    public function pop(void) : mixed;
-    public function lock(void) : void;
-    public function unlock(void) : void;
-    public function size(void) : bool;
-}
-
-class HashTable
-{
-    public function lock(void) : void;
-    public function unlock(void) : void;
-}
-
 class Thread
 {
     public function addTask(string $className, mixed ...$ctorArgs);
+    public function addFunctionTask(callable $fn, mixed ...$fnArgs);
     public function taskCount(void) : int;
-    public function threadStatus(void) : int;
     public function start(void) : void;
     public function join(void) : void;
 }
-```
 
-`Threaded` interface:
-```php
-interface Threaded
+class FileThread
 {
-    /*
-     * The entry point function for a new Threaded task.
-     */
+    public function __construct(string $filename, mixed ...$globals);
+    public function start(void) : void;
+    public function join(void) : void;
+}
+
+interface Runnable
+{
     public function run() void;
 }
-```
 
-`Queue` class is reference-counted across threads, and so it does not need to be explicitly destroyed. It looks as follows:
-```php
-class Queue
+interface Threaded // internal interface, not implementable by userland PHP classes
 {
-    /*
-     * Pushes a value to the queue.
-     */
-    public function push(mixed $value) : void;
-
-    /*
-     * Pops a value from the queue.
-     */
-    public function pop(void) : mixed;
-
-    /*
-     * Locks the mutex associated with this queue.
-     */
     public function lock(void) : void;
-
-    /*
-     * Unlocks the mutex associated with this queue.
-     */
     public function unlock(void) : void;
+}
 
-    /*
-     * Returns the number of values in the queue.
-     */
+class Queue implements Threaded
+{
+    public function push(mixed $value) : void;
+    public function pop(void) : mixed;
+    public function front(void) : mixed;
+    public function lock(void) : void;
+    public function unlock(void) : void;
+    public function size(void) : int;
+}
+
+class HashTable implements Threaded
+{
+    public function lock(void) : void;
+    public function unlock(void) : void;
+}
+
+class Vector implements Threaded
+{
+    public function push(mixed $value) : void;
+    public function pop(void) : mixed;
+    public function shift(void) : mixed;
+    public function unshift(mixed $value) : void;
+    public function insertAt(mixed $value, int $index) : void;
+    public function deleteAt(int $index) : void;
+    public function lock(void) : void;
+    public function unlock(void) : void;
     public function size(void) : int;
 }
 ```
-
-`HashTable` class is reference-counted across threads, and so it does not need to be explicitly destroyed. It looks as follows:
-```php
-class HashTable
-{
-    /*
-     * Locks the mutex associated with this hash table.
-     */
-    public function lock(void) : void;
-
-    /*
-     * Unlocks the mutex associated with this hash table.
-     */
-    public function unlock(void) : void;
-}
-```
-
-`Thread` class:
-```php
-class Thread
-{
-    /*
-     * Adds a new task to the thread.
-     *
-     * The arguments here will all be serialised, and the constructor will be
-     * invoked in the thread itself (where the object will also be created).
-     */
-    public function addTask(string $className, mixed ...$ctorArgs);
-
-    /*
-     * Returns a count of the number of tasks the thread has.
-     */
-    public function taskCount(void) : int;
-
-    /*
-     * Returns the current status of a thread.
-     *
-     * Valid statuses: UNDER_CONSTRUCTION, ACTIVE, FINISHED
-     */
-    public function threadStatus(void) : int;
-
-    /*
-     * Starts the thread.
-     *
-     * This is where a new context is created. Any tasks lined up will begin
-     * being processed.
-     */
-    public function start(void) : void;
-
-    /*
-     * Joins the thread.
-     *
-     * Destroys the newly created context, along with any tasks associated with
-     * the thread.
-     */
-    public function join(void) : void;
-}
-```
-
-With the above in mind, the serialisation points are:
- - The arguments to the `Thread::addTask` function
- - The values placed into the ITC-based data structures
