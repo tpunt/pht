@@ -23,7 +23,15 @@
 
 zend_class_entry *Threaded_ce;
 
+ZEND_BEGIN_ARG_INFO_EX(Threaded_lock_arginfo, 0, 0, 0)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(Threaded_unlock_arginfo, 0, 0, 0)
+ZEND_END_ARG_INFO()
+
 zend_function_entry Threaded_methods[] = {
+    PHP_ABSTRACT_ME(Threaded, lock, Threaded_lock_arginfo)
+    PHP_ABSTRACT_ME(Threaded, unlock, Threaded_unlock_arginfo)
     PHP_FE_END
 };
 
