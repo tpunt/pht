@@ -1,10 +1,10 @@
-# Pht: A New Approach to Threading in PHP
+# The Pht Threading Extension
 
-This extension is a new approach to threading in PHP. Caution: everything and anything is still subject to change.
+This extension exposes a new approach to threading in PHP. Everything and anything is still subject to change.
 
 Quick feature list:
  - Classes, functions, and files may be threaded
- - The inter-thread communication (ITC) data structures include: hash table, queue, vector
+ - The inter-thread communication (ITC) data structures include a: hash table, queue, vector
  - Threads are always reusable for any number of tasks
 
 Requirements:
@@ -113,6 +113,8 @@ See also the [examples](https://github.com/tpunt/pht/tree/master/examples) folde
 
 Quick overview:
 ```php
+<?php
+
 class Thread
 {
     public function addTask(string $className, mixed ...$ctorArgs);
@@ -131,7 +133,7 @@ class FileThread
 
 interface Runnable
 {
-    public function run() void;
+    public function run(void) void;
 }
 
 interface Threaded // internal interface, not implementable by userland PHP classes
@@ -154,6 +156,7 @@ class HashTable implements Threaded
 {
     public function lock(void) : void;
     public function unlock(void) : void;
+    // ArrayAccess API is enabled, but the userland interface is not explicitly implemented
 }
 
 class Vector implements Threaded
