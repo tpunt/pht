@@ -184,7 +184,7 @@ void pht_convert_entry_to_zval(zval *value, pht_entry_t *e)
             break;
         case PHT_HASH_TABLE:
             {
-                zend_object *obj = zend_hash_index_find_ptr(&PHT_ZG(itc_ds), (zend_ulong)PHT_ENTRY_Q(e));
+                zend_object *obj = zend_hash_index_find_ptr(&PHT_ZG(itc_ds), (zend_ulong)PHT_ENTRY_HT(e));
 
                 if (obj) {
                     ZVAL_OBJ(value, obj);
@@ -214,14 +214,14 @@ void pht_convert_entry_to_zval(zval *value, pht_entry_t *e)
                 pthread_mutex_unlock(&new_hto->htoi->lock);
 
                 zend_string_free(ce_name);
-                zend_hash_index_add_ptr(&PHT_ZG(itc_ds), (zend_ulong)PHT_ENTRY_Q(e), Z_OBJ(zobj));
+                zend_hash_index_add_ptr(&PHT_ZG(itc_ds), (zend_ulong)PHT_ENTRY_HT(e), Z_OBJ(zobj));
 
                 ZVAL_OBJ(value, Z_OBJ(zobj));
             }
             break;
         case PHT_VECTOR:
             {
-                zend_object *obj = zend_hash_index_find_ptr(&PHT_ZG(itc_ds), (zend_ulong)PHT_ENTRY_Q(e));
+                zend_object *obj = zend_hash_index_find_ptr(&PHT_ZG(itc_ds), (zend_ulong)PHT_ENTRY_V(e));
 
                 if (obj) {
                     ZVAL_OBJ(value, obj);
@@ -251,7 +251,7 @@ void pht_convert_entry_to_zval(zval *value, pht_entry_t *e)
                 pthread_mutex_unlock(&new_vo->voi->lock);
 
                 zend_string_free(ce_name);
-                zend_hash_index_add_ptr(&PHT_ZG(itc_ds), (zend_ulong)PHT_ENTRY_Q(e), Z_OBJ(zobj));
+                zend_hash_index_add_ptr(&PHT_ZG(itc_ds), (zend_ulong)PHT_ENTRY_V(e), Z_OBJ(zobj));
 
                 ZVAL_OBJ(value, Z_OBJ(zobj));
             }
