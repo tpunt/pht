@@ -34,7 +34,6 @@ zend_function_entry Runnable_methods[] = {
 void runnable_ce_init(void)
 {
     zend_class_entry ce;
-    zend_object_handlers *zh = zend_get_std_object_handlers();
 
     INIT_CLASS_ENTRY(ce, "Runnable", Runnable_methods);
     Runnable_ce = zend_register_internal_interface(&ce);

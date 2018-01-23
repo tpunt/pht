@@ -25,7 +25,6 @@ static void copy_executor_globals(void);
 static zend_function *copy_function(zend_function *old_func, zend_class_entry *new_ce);
 static zend_function *copy_internal_function(zend_function *old_func);
 static zend_arg_info *copy_function_arg_info(zend_arg_info *old_arg_info, uint32_t fn_flags, uint32_t num_args);
-static void copy_znode_op(znode_op *new_znode, znode_op *old_znode);
 static zend_op *copy_zend_op(zend_op_array *new_op_array, zend_op_array *old_op_array);
 static zend_live_range *copy_zend_live_range(zend_live_range *old_live_range, uint32_t count);
 static zend_try_catch_element *copy_zend_try_catch_element(zend_try_catch_element *old_try_catch, uint32_t count);
@@ -201,12 +200,6 @@ static zend_arg_info *copy_function_arg_info(zend_arg_info *old_arg_info, uint32
     }
 
     return new_arg_info;
-}
-
-// @todo currently unused
-static void copy_znode_op(znode_op *new_znode, znode_op *old_znode)
-{
-    memcpy(new_znode, old_znode, sizeof(znode_op));
 }
 
 static zend_op *copy_zend_op(zend_op_array *new_op_array, zend_op_array *old_op_array)

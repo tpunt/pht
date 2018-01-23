@@ -49,7 +49,6 @@ int threaded_interface_gets_implemented(zend_class_entry *interface, zend_class_
 void threaded_ce_init(void)
 {
     zend_class_entry ce;
-    zend_object_handlers *zh = zend_get_std_object_handlers();
 
     INIT_CLASS_ENTRY(ce, "Threaded", Threaded_methods);
     Threaded_ce = zend_register_internal_interface(&ce);
