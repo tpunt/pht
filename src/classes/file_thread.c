@@ -143,7 +143,7 @@ PHP_METHOD(FileThread, join)
         return;
     }
 
-    thread->status = DESTROYED;
+    thread->status = JOINED;
 
     pthread_join(thread->thread, NULL);
 }

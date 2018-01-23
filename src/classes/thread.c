@@ -195,7 +195,7 @@ PHP_METHOD(Thread, join)
         return;
     }
 
-    thread->status = DESTROYED;
+    thread->status = JOINED;
 
     pthread_join(thread->thread, NULL);
 }

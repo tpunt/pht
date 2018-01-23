@@ -85,7 +85,7 @@ void task_delete(void *task_void)
 
 void thread_init(thread_obj_t *thread, pht_thread_type_t type)
 {
-    thread->status = UNDER_CONSTRUCTION;
+    thread->status = NOT_STARTED;
     thread->type = type;
     thread->parent_thread_ls = TSRMLS_CACHE;
 
@@ -111,11 +111,11 @@ void thread_join_destroy(zval *zthread)
 {
     thread_obj_t *thread = Z_PTR_P(zthread);
 
-    if (thread->status == UNDER_CONSTRUCTION) { // the thread was never actually started
+    if (thread->status == NOT_STARTED) {
         return;
     }
 
-    thread->status = DESTROYED;
+    thread->status = JOINED;
 
     pthread_join(thread->thread, NULL);
 
@@ -251,7 +251,7 @@ void handle_file_thread_task(thread_obj_t *thread)
 void handle_thread_tasks(thread_obj_t *thread)
 {
     // @todo mutex lock?
-    while (thread->status != DESTROYED || thread->tasks.size) {
+    while (thread->status != JOINED || thread->tasks.size) {
         task_t *task = pht_queue_pop(&thread->tasks);
 
         if (!task) {
@@ -301,8 +301,8 @@ void *worker_function(thread_obj_t *thread)
     }
 
     pthread_mutex_lock(&thread->lock);
-    if (thread->status == UNDER_CONSTRUCTION) {
-        thread->status = ACTIVE;
+    if (thread->status == NOT_STARTED) {
+        thread->status = STARTED;
     }
     pthread_mutex_unlock(&thread->lock);
 

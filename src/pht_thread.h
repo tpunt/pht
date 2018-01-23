@@ -59,10 +59,9 @@ typedef struct _task_t {
 } task_t;
 
 typedef enum _status_t {
-    UNDER_CONSTRUCTION,
-    ACTIVE,
-    FINISHED,
-    DESTROYED // JOINED?
+    NOT_STARTED,
+    STARTED,
+    JOINED
 } status_t;
 
 typedef enum _pht_thread_type_t {
