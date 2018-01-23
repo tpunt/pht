@@ -25,6 +25,7 @@
 #include "src/classes/queue.h"
 #include "src/classes/hashtable.h"
 #include "src/classes/vector.h"
+#include "src/classes/atomic_integer.h"
 
 typedef struct _pht_entry_t {
     int type;
@@ -37,6 +38,7 @@ typedef struct _pht_entry_t {
         queue_obj_internal_t *queue;
         hashtable_obj_internal_t *hash_table;
         vector_obj_internal_t *vector;
+        atomic_integer_obj_internal_t *atomic_integer;
         // array
         // object
     } val;
@@ -46,6 +48,7 @@ typedef struct _pht_entry_t {
 #define PHT_QUEUE 101
 #define PHT_HASH_TABLE 102
 #define PHT_VECTOR 103
+#define PHT_ATOMIC_INTEGER 104
 
 #define PHT_ENTRY_TYPE(s) (s)->type
 #define PHT_ENTRY_STRING(s) (s)->val.string
@@ -56,6 +59,7 @@ typedef struct _pht_entry_t {
 #define PHT_ENTRY_Q(s) (s)->val.queue
 #define PHT_ENTRY_HT(s) (s)->val.hash_table
 #define PHT_ENTRY_V(s) (s)->val.vector
+#define PHT_ENTRY_AI(s) (s)->val.atomic_integer
 
 void pht_convert_entry_to_zval(zval *value, pht_entry_t *s);
 int pht_convert_zval_to_entry(pht_entry_t *e, zval *value);

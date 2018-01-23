@@ -78,6 +78,15 @@ void pht_entry_delete_value(pht_entry_t *entry)
             if (!PHT_ENTRY_V(entry)->refcount) {
                 voi_free(PHT_ENTRY_V(entry));
             }
+            break;
+        case PHT_ATOMIC_INTEGER:
+            pthread_mutex_lock(&PHT_ENTRY_AI(entry)->lock);
+            --PHT_ENTRY_AI(entry)->refcount;
+            pthread_mutex_unlock(&PHT_ENTRY_AI(entry)->lock);
+
+            if (!PHT_ENTRY_AI(entry)->refcount) {
+                aioi_free(PHT_ENTRY_AI(entry));
+            }
     }
 }
 
@@ -247,6 +256,43 @@ void pht_convert_entry_to_zval(zval *value, pht_entry_t *e)
                 ZVAL_OBJ(value, Z_OBJ(zobj));
             }
             break;
+        case PHT_ATOMIC_INTEGER:
+            {
+                zend_object *obj = zend_hash_index_find_ptr(&PHT_ZG(itc_ds), (zend_ulong)PHT_ENTRY_AI(e));
+
+                if (obj) {
+                    ZVAL_OBJ(value, obj);
+                    break;
+                }
+
+                zend_string *ce_name = zend_string_init("AtomicInteger", sizeof("AtomicInteger") - 1, 0);
+                zend_class_entry *ce = zend_lookup_class(ce_name);
+                zval zobj;
+
+                PHT_ZG(skip_aioi_creation) = 1;
+
+                if (object_init_ex(&zobj, ce) != SUCCESS) {
+                    // @todo this will throw an exception in the new thread, rather than at
+                    // the call site - how should it behave?
+                    zend_throw_exception(zend_ce_exception, "Failed to create Runnable object from AtomicInteger class", 0);
+                }
+
+                PHT_ZG(skip_aioi_creation) = 0;
+
+                atomic_integer_obj_t *new_aio = (atomic_integer_obj_t *)((char *)Z_OBJ(zobj) - Z_OBJ(zobj)->handlers->offset);
+
+                new_aio->aioi = PHT_ENTRY_AI(e);
+
+                pthread_mutex_lock(&new_aio->aioi->lock);
+                ++new_aio->aioi->refcount;
+                pthread_mutex_unlock(&new_aio->aioi->lock);
+
+                zend_string_free(ce_name);
+                zend_hash_index_add_ptr(&PHT_ZG(itc_ds), (zend_ulong)PHT_ENTRY_AI(e), Z_OBJ(zobj));
+
+                ZVAL_OBJ(value, Z_OBJ(zobj));
+            }
+            break;
         case IS_OBJECT:
             {
                 size_t buf_len = PHT_STRL(PHT_ENTRY_STRING(e));
@@ -348,6 +394,15 @@ int pht_convert_zval_to_entry(pht_entry_t *e, zval *value)
                         pthread_mutex_lock(&vo->voi->lock);
                         ++vo->voi->refcount;
                         pthread_mutex_unlock(&vo->voi->lock);
+                    } else if (instanceof_function(Z_OBJCE_P(value), AtomicInteger_ce)) {
+                        atomic_integer_obj_t *aio = (atomic_integer_obj_t *)((char *)Z_OBJ_P(value) - Z_OBJ_P(value)->handlers->offset);
+
+                        PHT_ENTRY_TYPE(e) = PHT_ATOMIC_INTEGER;
+                        PHT_ENTRY_AI(e) = aio->aioi;
+
+                        pthread_mutex_lock(&aio->aioi->lock);
+                        ++aio->aioi->refcount;
+                        pthread_mutex_unlock(&aio->aioi->lock);
                     } else {
                         assert(0);
                     }

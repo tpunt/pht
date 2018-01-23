@@ -32,6 +32,7 @@
 #include "src/classes/hashtable.h"
 #include "src/classes/vector.h"
 #include "src/classes/file_thread.h"
+#include "src/classes/atomic_integer.h"
 
 ZEND_DECLARE_MODULE_GLOBALS(pht)
 
@@ -44,6 +45,7 @@ PHP_MINIT_FUNCTION(pht)
     hashtable_ce_init();
     vector_ce_init();
     file_thread_ce_init();
+    atomic_integer_ce_init();
 
     return SUCCESS;
 }
@@ -63,6 +65,7 @@ PHP_RINIT_FUNCTION(pht)
     PHT_ZG(skip_qoi_creation) = 0;
     PHT_ZG(skip_htoi_creation) = 0;
     PHT_ZG(skip_voi_creation) = 0;
+    PHT_ZG(skip_aioi_creation) = 0;
 
     return SUCCESS;
 }
