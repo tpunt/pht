@@ -22,14 +22,14 @@
 #include "src/pht_entry.h"
 #include "src/ds/pht_hashtable.h"
 
-static void *pht_hashtable_search_direct(pht_hashtable_t *ht, pht_string_t *key, int hash);
-static pht_string_t *pht_hashtable_key_fetch_direct(pht_hashtable_t *ht, pht_string_t *key, int hash);
-static void pht_hashtable_insert_direct(pht_hashtable_t *ht, pht_string_t *key, int hash, void *value);
-void pht_hashtable_update_direct(pht_hashtable_t *ht, pht_string_t *key, int hash, void *value);
-void pht_hashtable_delete_direct(pht_hashtable_t *ht, pht_string_t *key, int hash);
+static void *pht_hashtable_search_direct(pht_hashtable_t *ht, pht_string_t *key, long hash);
+static pht_string_t *pht_hashtable_key_fetch_direct(pht_hashtable_t *ht, pht_string_t *key, long hash);
+static void pht_hashtable_insert_direct(pht_hashtable_t *ht, pht_string_t *key, long hash, void *value);
+void pht_hashtable_update_direct(pht_hashtable_t *ht, pht_string_t *key, long hash, void *value);
+void pht_hashtable_delete_direct(pht_hashtable_t *ht, pht_string_t *key, long hash);
 static void pht_hashtable_resize(pht_hashtable_t *ht);
 static void pht_hashtable_repopulate(pht_hashtable_t *ht, pht_bucket_t *old_values, int old_size);
-static int get_hash(pht_string_t *key);
+static long get_hash(pht_string_t *key);
 
 void pht_hashtable_init(pht_hashtable_t *ht, int size, void (*dtor)(void *))
 {
@@ -59,7 +59,7 @@ void pht_hashtable_destroy(pht_hashtable_t *ht)
     free(ht->values);
 }
 
-void pht_hashtable_insert_ind(pht_hashtable_t *ht, int hash, void *value)
+void pht_hashtable_insert_ind(pht_hashtable_t *ht, long hash, void *value)
 {
     // resize at 75% capacity
     if (ht->used == ht->size - (ht->size >> 2)) {
@@ -79,7 +79,7 @@ void pht_hashtable_insert(pht_hashtable_t *ht, pht_string_t *key, void *value)
     pht_hashtable_insert_direct(ht, key, get_hash(key), value);
 }
 
-static void pht_hashtable_insert_direct(pht_hashtable_t *ht, pht_string_t *key, int hash, void *value)
+static void pht_hashtable_insert_direct(pht_hashtable_t *ht, pht_string_t *key, long hash, void *value)
 {
     int index = hash & (ht->size - 1);
     int variance = 0;
@@ -97,7 +97,7 @@ static void pht_hashtable_insert_direct(pht_hashtable_t *ht, pht_string_t *key, 
         }
 
         if (variance > b->variance) {
-            int tmp_hash = b->hash;
+            long tmp_hash = b->hash;
             void *tmp_value = b->value;
             int tmp_variance = b->variance;
             pht_string_t *tmp_key = b->key;
@@ -147,18 +147,12 @@ static void pht_hashtable_repopulate(pht_hashtable_t *ht, pht_bucket_t *old_valu
 }
 
 // @todo make decent
-static int get_hash(pht_string_t *key)
+static long get_hash(pht_string_t *key)
 {
-    int hash = 0;
-
-    for (int i = 0; i < PHT_STRL_P(key); ++i) {
-        hash += PHT_STRV_P(key)[i];
-    }
-
-    return hash;
+    return zend_hash_func(PHT_STRV_P(key), PHT_STRL_P(key));
 }
 
-void *pht_hashtable_search_ind(pht_hashtable_t *ht, int hash)
+void *pht_hashtable_search_ind(pht_hashtable_t *ht, long hash)
 {
     return pht_hashtable_search_direct(ht, NULL, hash);
 }
@@ -168,7 +162,7 @@ void *pht_hashtable_search(pht_hashtable_t *ht, pht_string_t *key)
     return pht_hashtable_search_direct(ht, key, get_hash(key));
 }
 
-void *pht_hashtable_search_direct(pht_hashtable_t *ht, pht_string_t *key, int hash)
+void *pht_hashtable_search_direct(pht_hashtable_t *ht, pht_string_t *key, long hash)
 {
     int index = hash & (ht->size - 1);
 
@@ -201,7 +195,7 @@ pht_string_t *pht_hashtable_key_fetch(pht_hashtable_t *ht, pht_string_t *key)
     return pht_hashtable_key_fetch_direct(ht, key, get_hash(key));
 }
 
-static pht_string_t *pht_hashtable_key_fetch_direct(pht_hashtable_t *ht, pht_string_t *key, int hash)
+static pht_string_t *pht_hashtable_key_fetch_direct(pht_hashtable_t *ht, pht_string_t *key, long hash)
 {
     int index = hash & (ht->size - 1);
 
@@ -229,7 +223,7 @@ static pht_string_t *pht_hashtable_key_fetch_direct(pht_hashtable_t *ht, pht_str
     return NULL;
 }
 
-void pht_hashtable_update_ind(pht_hashtable_t *ht, int hash, void *value)
+void pht_hashtable_update_ind(pht_hashtable_t *ht, long hash, void *value)
 {
     pht_hashtable_update_direct(ht, NULL, hash, value);
 }
@@ -239,7 +233,7 @@ void pht_hashtable_update(pht_hashtable_t *ht, pht_string_t *key, void *value)
     pht_hashtable_update_direct(ht, key, get_hash(key), value);
 }
 
-void pht_hashtable_update_direct(pht_hashtable_t *ht, pht_string_t *key, int hash, void *value)
+void pht_hashtable_update_direct(pht_hashtable_t *ht, pht_string_t *key, long hash, void *value)
 {
     int index = hash & (ht->size - 1);
 
@@ -258,7 +252,7 @@ void pht_hashtable_update_direct(pht_hashtable_t *ht, pht_string_t *key, int has
     }
 }
 
-void pht_hashtable_delete_ind(pht_hashtable_t *ht, int hash)
+void pht_hashtable_delete_ind(pht_hashtable_t *ht, long hash)
 {
     pht_hashtable_delete_direct(ht, NULL, hash);
 }
@@ -268,7 +262,7 @@ void pht_hashtable_delete(pht_hashtable_t *ht, pht_string_t *key)
     pht_hashtable_delete_direct(ht, key, get_hash(key));
 }
 
-void pht_hashtable_delete_direct(pht_hashtable_t *ht, pht_string_t *key, int hash)
+void pht_hashtable_delete_direct(pht_hashtable_t *ht, pht_string_t *key, long hash)
 {
     int index = hash & (ht->size - 1);
 
