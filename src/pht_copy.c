@@ -378,8 +378,47 @@ static zend_function *copy_internal_function(zend_function *old_func)
 
 static void copy_ini_directives(HashTable *new_ini_directives, HashTable *old_ini_directives)
 {
-    // check ini directives to ensure no changes have occurred.
-    // if there are changes, then update ...
+    zend_ini_entry *old_ini_entry;
+    zend_string *ini_name;
+
+    ZEND_HASH_FOREACH_STR_KEY_PTR(old_ini_directives, ini_name, old_ini_entry) {
+        zend_ini_entry *new_ini_entry = zend_hash_find_ptr(new_ini_directives, ini_name);
+
+        if (!new_ini_entry || !old_ini_entry->value || !new_ini_entry->value) {
+            continue;
+        }
+
+        if (strcmp(ZSTR_VAL(old_ini_entry->value), ZSTR_VAL(new_ini_entry->value)) == SUCCESS) {
+            continue;
+        }
+
+        zend_bool modifiable = new_ini_entry->modifiable;
+        zend_string *new_ini_name = zend_string_dup(ini_name, 0);
+
+        if (!EG(modified_ini_directives)) {
+            ALLOC_HASHTABLE(EG(modified_ini_directives));
+            zend_hash_init(EG(modified_ini_directives), 8, NULL, NULL, 0);
+        }
+
+        if (!new_ini_entry->modified) {
+            new_ini_entry->orig_value = new_ini_entry->value;
+            new_ini_entry->orig_modifiable = new_ini_entry->modifiable;
+            new_ini_entry->modified = 1;
+            zend_hash_add_ptr(EG(modified_ini_directives), new_ini_name, new_ini_entry);
+        }
+
+        new_ini_entry->modifiable = 1;
+        new_ini_entry->on_modify(new_ini_entry, old_ini_entry->value, new_ini_entry->mh_arg1, new_ini_entry->mh_arg2, new_ini_entry->mh_arg3, ZEND_INI_SYSTEM);
+
+        if (new_ini_entry->modified && new_ini_entry->orig_value != new_ini_entry->value) {
+            zend_string_release(new_ini_entry->value);
+        }
+
+        new_ini_entry->value = zend_string_dup(old_ini_entry->value, 0);
+        new_ini_entry->modifiable = modifiable;
+
+        zend_string_release(new_ini_name);
+    } ZEND_HASH_FOREACH_END();
 }
 
 static void copy_included_files(HashTable *new_included_files, HashTable *old_included_files)
