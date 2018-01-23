@@ -95,17 +95,25 @@ void thread_init(thread_obj_t *thread, pht_thread_type_t type)
 
 void th_free_obj(zend_object *obj)
 {
+    if (EG(exit_status)) {
+        // We don't remove the object from PHT_ZG(child_threads), as this causes
+        // problems when ZE bails out due to an exception, causing the child_threads
+        // HT to be destroyed before this object's function has been invoked.
+        return;
+    }
+
     thread_obj_t *thread = (thread_obj_t *)((char *)obj - obj->handlers->offset);
 
-    // We don't remove the object from PHT_ZG(child_threads), as this causes
-    // problems when ZE bails out due to an exception, causing the child_threads
-    // HT to be destroyed before this object's function has been invoked.
-    // zend_hash_index_del(&PHT_ZG(child_threads), (zend_ulong)thread);
+    zend_hash_index_del(&PHT_ZG(child_threads), (zend_ulong)thread);
 }
 
 void thread_join_destroy(zval *zthread)
 {
     thread_obj_t *thread = Z_PTR_P(zthread);
+
+    if (thread->status == UNDER_CONSTRUCTION) { // the thread was never actually started
+        return;
+    }
 
     thread->status = DESTROYED;
 
@@ -122,7 +130,7 @@ void handle_class_task(class_task_t *class_task)
 {
     zend_string *ce_name = zend_string_init(PHT_STRV(class_task->name), PHT_STRL(class_task->name), 0);
     zend_class_entry *ce = zend_fetch_class_by_name(ce_name, NULL, ZEND_FETCH_CLASS_DEFAULT | ZEND_FETCH_CLASS_EXCEPTION);
-    zend_function *constructor, *run;
+    zend_function *constructor;
     zval zobj;
 
     if (object_init_ex(&zobj, ce) != SUCCESS) {
