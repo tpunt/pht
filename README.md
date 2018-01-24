@@ -67,7 +67,6 @@ This means that the serialisation points to be aware of are:
 
 ## API
 
-Quick overview:
 ```php
 <?php
 
@@ -118,15 +117,29 @@ class HashTable implements Threaded
 
 class Vector implements Threaded
 {
+    public function __construct([int $size = 0 [, mixed $defaultValue = 0]]);
+    public function resize(int $size [, mixed $defaultValue = 0]);
     public function push(mixed $value) : void;
     public function pop(void) : mixed;
     public function shift(void) : mixed;
     public function unshift(mixed $value) : void;
     public function insertAt(mixed $value, int $index) : void;
+    public function updateAt(mixed $value, int $index) : void;
     public function deleteAt(int $index) : void;
     public function lock(void) : void;
     public function unlock(void) : void;
     public function size(void) : int;
+}
+
+class AtomicInteger implements Threaded
+{
+    public function __construct([int $value = 0]);
+    public function get(void) : int;
+    public function set(int $value) : void;
+    public function inc(void) : void;
+    public function dev(void) : void;
+    public function lock(void) : void;
+    public function unlock(void) : void;
 }
 ```
 
@@ -227,7 +240,17 @@ All `$globals` being passed into the `FileThread::__construct()` method will be 
 
 ### Inter-Thread Communication Data Structures
 
-The inter-thread communication (ITC) data structures enable for a two-way communication style between threads. They may be safely passed around between threads, where they are reference-counted across threads to prevent them from being prematurely destroyed. These data structures may also be nested (such as using a `Vector` in a `Vector`), however, any cyclic references *will leak* (due to the simplistic nature of reference counting). So be careful when nesting them. Any values placed into these data structures will be serialised.
+The inter-thread communication (ITC) data structures enable for a two-way communication style between threads.
+
+They are:
+ - safe to pass around between threads
+ - reference-counted across threads
+ - nestable within one-another (such as using a `Vector` in a `Vector`)
+
+Things to note:
+ - cyclic references will leak (due to the simplistic nature of reference counting)
+ - all values placed into these data structures will be serialised
+ - the mutexes exposed by these data structures are not reentrant
 
 #### Queue
 
@@ -341,4 +364,43 @@ $thread->join();
 for ($i = 0; $i < $hashTableItemCount; ++$i) {
     var_dump($hashTable[chr(ord('a') + $i)]);
 }
+```
+
+### Atomic Values
+
+Atomic values are classes that wrap simple values. These values are safe to update without acquiring mutex locks, but they also pack with them mutex locks should multiple actions need to be performed one said value. The mutex locks, for this reason, are reentrant.
+
+#### Atomic Integer
+
+```php
+<?php
+
+$thread = new Thread();
+$atomicInteger = new AtomicInteger();
+$max = 100000;
+
+$thread->addFunctionTask(function ($atomicInteger, $max) {
+    for ($i = 0; $i < $max; ++$i) {
+        $atomicInteger->inc();
+    }
+}, $atomicInteger, $max);
+
+$thread->start();
+
+// safe
+for ($i = 0; $i < $max; ++$i) {
+    $atomicInteger->inc();
+}
+
+// safe
+while ($atomicInteger->get() !== $max * 2);
+
+// requires mutex locking since we need to perform multiple operations together
+$atomicInteger->lock();
+$atomicInteger->set($atomicInteger->get() * 2);
+$atomicInteger->unlock();
+
+$thread->join();
+
+var_dump($atomicInteger->get()); // int(400000)
 ```
