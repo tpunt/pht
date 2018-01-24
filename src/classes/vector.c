@@ -50,7 +50,7 @@ static zend_object *vector_ctor(zend_class_entry *entry)
     if (!PHT_ZG(skip_voi_creation)) {
         vector_obj_internal_t *voi = calloc(1, sizeof(vector_obj_internal_t));
 
-        pht_vector_init(&voi->vector, 2, pht_entry_delete);
+        // delay vector initialisation until constructor
         pthread_mutex_init(&voi->lock, NULL);
         voi->refcount = 1;
         voi->vn = 0;
@@ -229,6 +229,144 @@ HashTable *vo_get_properties(zval *zobj)
     return zht;
 }
 
+ZEND_BEGIN_ARG_INFO_EX(Vector___construct_arginfo, 0, 0, 0)
+    ZEND_ARG_INFO(0, size)
+    ZEND_ARG_INFO(0, initial_value)
+ZEND_END_ARG_INFO()
+
+PHP_METHOD(Vector, __construct)
+{
+    vector_obj_t *vo = (vector_obj_t *)((char *)Z_OBJ(EX(This)) - Z_OBJ(EX(This))->handlers->offset);
+    zend_long size = 0;
+    zval *initial_value = NULL;
+
+    ZEND_PARSE_PARAMETERS_START(0, 2)
+        Z_PARAM_OPTIONAL
+        Z_PARAM_LONG(size)
+        Z_PARAM_ZVAL(initial_value)
+    ZEND_PARSE_PARAMETERS_END();
+
+    if (size < 0) {
+        zend_throw_error(NULL, "Invalid size given - size must be a non-negative integer");
+        return;
+    }
+
+    pht_vector_init(&vo->voi->vector, size, pht_entry_delete);
+
+    if (!vo->voi->vector.values) {
+        zend_throw_error(NULL, "Failed to create a vector of the specified size");
+        return;
+    }
+
+    if (size) {
+        if (initial_value) {
+            pht_entry_t *entry = pht_create_entry_from_zval(initial_value);
+
+            if (!entry) {
+                zend_throw_error(NULL, "Failed to serialise the value");
+                return;
+            }
+
+            pht_vector_push(&vo->voi->vector, entry);
+
+            for (int i = 1; i < size; ++i) {
+                pht_vector_push(&vo->voi->vector, pht_create_entry_from_zval(initial_value));
+            }
+        } else {
+            zval value;
+
+            ZVAL_LONG(&value, 0);
+
+            for (int i = 0; i < size; ++i) {
+                pht_vector_push(&vo->voi->vector, pht_create_entry_from_zval(&value));
+            }
+        }
+    }
+
+    ++vo->voi->vn;
+}
+
+ZEND_BEGIN_ARG_INFO_EX(Vector_resize_arginfo, 0, 0, 1)
+    ZEND_ARG_INFO(0, size)
+    ZEND_ARG_INFO(0, initial_value)
+ZEND_END_ARG_INFO()
+
+PHP_METHOD(Vector, resize)
+{
+    vector_obj_t *vo = (vector_obj_t *)((char *)Z_OBJ(EX(This)) - Z_OBJ(EX(This))->handlers->offset);
+    zend_long size;
+    zval *initial_value = NULL;
+
+    ZEND_PARSE_PARAMETERS_START(1, 2)
+        Z_PARAM_LONG(size)
+        Z_PARAM_OPTIONAL
+        Z_PARAM_ZVAL(initial_value)
+    ZEND_PARSE_PARAMETERS_END();
+
+    if (size < 0) {
+        zend_throw_error(NULL, "Invalid size given - size must be a non-negative integer");
+        return;
+    }
+
+    if (size == vo->voi->vector.size) {
+        return;
+    }
+
+    pht_entry_t **values = malloc(size * sizeof(pht_entry_t *)), *entry;
+
+    if (!values) {
+        zend_throw_error(NULL, "Failed to resize the vector to the specified size");
+        return;
+    }
+
+    if (size > vo->voi->vector.used) {
+        memcpy(values, vo->voi->vector.values, vo->voi->vector.used * sizeof(pht_entry_t *));
+
+        if (initial_value) {
+            entry = pht_create_entry_from_zval(initial_value);
+
+            if (!entry) {
+                zend_throw_error(NULL, "Failed to serialise the value");
+                return;
+            }
+        }
+    } else {
+        memcpy(values, vo->voi->vector.values, size * sizeof(pht_entry_t *));
+    }
+
+    vo->voi->vector.size = size;
+
+    if (size > vo->voi->vector.used) {
+        free(vo->voi->vector.values);
+        vo->voi->vector.values = values;
+
+        if (initial_value) {
+            pht_vector_push(&vo->voi->vector, entry);
+
+            while (vo->voi->vector.used < size) {
+                pht_vector_push(&vo->voi->vector, pht_create_entry_from_zval(initial_value));
+            }
+        } else {
+            zval value;
+
+            ZVAL_LONG(&value, 0);
+
+            while (vo->voi->vector.used < size) {
+                pht_vector_push(&vo->voi->vector, pht_create_entry_from_zval(&value));
+            }
+        }
+    } else {
+        while (vo->voi->vector.used > size) {
+            pht_entry_delete(pht_vector_pop(&vo->voi->vector));
+        }
+
+        free(vo->voi->vector.values);
+        vo->voi->vector.values = values;
+    }
+
+    ++vo->voi->vn;
+}
+
 ZEND_BEGIN_ARG_INFO_EX(Vector_push_arginfo, 0, 0, 1)
     ZEND_ARG_INFO(0, value)
 ZEND_END_ARG_INFO()
@@ -354,6 +492,37 @@ PHP_METHOD(Vector, insertAt)
     ++vo->voi->vn;
 }
 
+ZEND_BEGIN_ARG_INFO_EX(Vector_update_at_arginfo, 0, 0, 2)
+    ZEND_ARG_INFO(0, value)
+    ZEND_ARG_INFO(0, index)
+ZEND_END_ARG_INFO()
+
+PHP_METHOD(Vector, updateAt)
+{
+    vector_obj_t *vo = (vector_obj_t *)((char *)Z_OBJ(EX(This)) - Z_OBJ(EX(This))->handlers->offset);
+    zval *value;
+    zend_long index;
+
+    ZEND_PARSE_PARAMETERS_START(2, 2)
+        Z_PARAM_ZVAL(value)
+        Z_PARAM_LONG(index)
+    ZEND_PARSE_PARAMETERS_END();
+
+    pht_entry_t *entry = pht_create_entry_from_zval(value);
+
+    if (!entry) {
+        zend_throw_error(NULL, "Failed to serialise the value");
+        return;
+    }
+
+    if (!pht_vector_update_at(&vo->voi->vector, entry, index)) {
+        zend_throw_error(NULL, "Attempted to update an element from an out-of-bounds index");
+        return;
+    }
+
+    ++vo->voi->vn;
+}
+
 ZEND_BEGIN_ARG_INFO_EX(Vector_delete_at_arginfo, 0, 0, 1)
     ZEND_ARG_INFO(0, index)
 ZEND_END_ARG_INFO()
@@ -418,11 +587,14 @@ PHP_METHOD(Vector, size)
 }
 
 zend_function_entry Vector_methods[] = {
+    PHP_ME(Vector, __construct, Vector___construct_arginfo, ZEND_ACC_PUBLIC)
+    PHP_ME(Vector, resize, Vector_resize_arginfo, ZEND_ACC_PUBLIC)
     PHP_ME(Vector, push, Vector_push_arginfo, ZEND_ACC_PUBLIC)
     PHP_ME(Vector, pop, Vector_pop_arginfo, ZEND_ACC_PUBLIC)
     PHP_ME(Vector, shift, Vector_shift_arginfo, ZEND_ACC_PUBLIC)
     PHP_ME(Vector, unshift, Vector_unshift_arginfo, ZEND_ACC_PUBLIC)
     PHP_ME(Vector, insertAt, Vector_insert_at_arginfo, ZEND_ACC_PUBLIC)
+    PHP_ME(Vector, updateAt, Vector_update_at_arginfo, ZEND_ACC_PUBLIC)
     PHP_ME(Vector, deleteAt, Vector_delete_at_arginfo, ZEND_ACC_PUBLIC)
     PHP_ME(Vector, lock, Vector_lock_arginfo, ZEND_ACC_PUBLIC)
     PHP_ME(Vector, unlock, Vector_unlock_arginfo, ZEND_ACC_PUBLIC)

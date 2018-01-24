@@ -75,6 +75,20 @@ unset($v[1]);
 var_dump(isset($v[1]), empty($v[1]));
 $v->insertAt(2, 0);
 var_dump($v);
+$v->updateAt(3, 1);
+var_dump($v);
+$v = new Vector(2, 100);
+var_dump($v);
+$v->push(101);
+var_dump($v);
+$v->updateAt(99, 0);
+var_dump($v);
+$v = new Vector(4, 1);
+var_dump($v);
+$v->resize(3);
+var_dump($v);
+$v->resize(5);
+var_dump($v);
 --EXPECT--
 object(Vector)#1 (2) {
   [0]=>
@@ -111,5 +125,63 @@ object(Vector)#1 (2) {
   [0]=>
   int(2)
   [1]=>
+  int(0)
+}
+object(Vector)#1 (2) {
+  [0]=>
+  int(2)
+  [1]=>
+  int(3)
+}
+object(Vector)#4 (2) {
+  [0]=>
+  int(100)
+  [1]=>
+  int(100)
+}
+object(Vector)#4 (3) {
+  [0]=>
+  int(100)
+  [1]=>
+  int(100)
+  [2]=>
+  int(101)
+}
+object(Vector)#4 (3) {
+  [0]=>
+  int(99)
+  [1]=>
+  int(100)
+  [2]=>
+  int(101)
+}
+object(Vector)#1 (4) {
+  [0]=>
+  int(1)
+  [1]=>
+  int(1)
+  [2]=>
+  int(1)
+  [3]=>
+  int(1)
+}
+object(Vector)#1 (3) {
+  [0]=>
+  int(1)
+  [1]=>
+  int(1)
+  [2]=>
+  int(1)
+}
+object(Vector)#1 (5) {
+  [0]=>
+  int(1)
+  [1]=>
+  int(1)
+  [2]=>
+  int(1)
+  [3]=>
+  int(0)
+  [4]=>
   int(0)
 }
