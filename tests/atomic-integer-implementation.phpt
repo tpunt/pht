@@ -35,5 +35,16 @@ while (true) {
 $thread->join();
 
 var_dump($atomicInteger->get());
+var_dump($atomicInteger);
+$atomicInteger->inc();
+var_dump($atomicInteger);
 --EXPECT--
 int(105)
+object(AtomicInteger)#2 (1) {
+  ["value"]=>
+  int(105)
+}
+object(AtomicInteger)#2 (1) {
+  ["value"]=>
+  int(106)
+}

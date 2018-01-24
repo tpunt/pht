@@ -42,7 +42,6 @@ static zend_object *atomic_integer_ctor(zend_class_entry *entry)
     object_properties_init(&aio->obj, entry);
 
     aio->obj.handlers = &atomic_integer_handlers;
-    aio->vn = 0;
 
     if (!PHT_ZG(skip_aioi_creation)) {
         atomic_integer_obj_internal_t *aioi = calloc(1, sizeof(atomic_integer_obj_internal_t));
@@ -54,7 +53,6 @@ static zend_object *atomic_integer_ctor(zend_class_entry *entry)
         aioi->value = 0;
         pthread_mutex_init(&aioi->lock, &attr);
         aioi->refcount = 1;
-        aioi->vn = 0;
 
         aio->aioi = aioi;
     }
@@ -84,6 +82,27 @@ void aio_free_obj(zend_object *obj)
     if (!aio->aioi->refcount) {
         aioi_free(aio->aioi);
     }
+}
+
+HashTable *aio_get_properties(zval *zobj)
+{
+    zend_object *obj = Z_OBJ_P(zobj);
+    atomic_integer_obj_t *aio = (atomic_integer_obj_t *)((char *)obj - obj->handlers->offset);
+    zval value;
+
+    pthread_mutex_lock(&aio->aioi->lock);
+    ZVAL_LONG(&value, aio->aioi->value);
+    pthread_mutex_unlock(&aio->aioi->lock);
+
+    if (obj->properties) {
+        zend_hash_str_update(obj->properties, "value", sizeof("value") - 1, &value);
+    } else {
+        ALLOC_HASHTABLE(obj->properties);
+        zend_hash_init(obj->properties, 1, NULL, ZVAL_PTR_DTOR, 0);
+        zend_hash_str_add(obj->properties, "value", sizeof("value") - 1, &value);
+    }
+
+    return obj->properties;
 }
 
 ZEND_BEGIN_ARG_INFO_EX(AtomicInteger___construct_arginfo, 0, 0, 0)
@@ -222,7 +241,5 @@ void atomic_integer_ce_init(void)
     atomic_integer_handlers.offset = XtOffsetOf(atomic_integer_obj_t, obj);
     atomic_integer_handlers.dtor_obj = aio_dtor_obj;
     atomic_integer_handlers.free_obj = aio_free_obj;
-
-    // atomic_integer_handlers.get_debug_info = aio_get_debug_info;
-    // atomic_integer_handlers.get_properties = aio_get_properties;
+    atomic_integer_handlers.get_properties = aio_get_properties;
 }

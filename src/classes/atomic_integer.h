@@ -27,12 +27,10 @@ typedef struct _atomic_integer_obj_internal_t {
     zend_long value;
     pthread_mutex_t lock;
     uint32_t refcount;
-    zend_ulong vn;
 } atomic_integer_obj_internal_t;
 
 typedef struct _atomic_integer_obj_t {
     atomic_integer_obj_internal_t *aioi;
-    zend_ulong vn;
     zend_object obj;
 } atomic_integer_obj_t;
 
