@@ -138,7 +138,8 @@ void handle_class_task(class_task_t *class_task)
         // the call site. This doesn't even have an execution context - how
         // should it behave?
         zend_throw_exception_ex(zend_ce_exception, 0, "Failed to create Runnable object from class '%s'\n", ZSTR_VAL(ce_name));
-        goto finish;
+        zend_string_free(ce_name);
+        return;
     }
 
     constructor = Z_OBJ_HT(zobj)->get_constructor(Z_OBJ(zobj));
@@ -163,21 +164,22 @@ void handle_class_task(class_task_t *class_task)
 
         result = zend_call_function(&fci, NULL);
 
-        if (result == FAILURE) {
-            if (!EG(exception)) {
-                // @todo same exception throwing problem and constructor name as above?
-                zend_error_noreturn(E_CORE_ERROR, "Couldn't execute method %s%s%s", ZSTR_VAL(ce_name), "::", "__construct");
-                zval_dtor(&fci.function_name);
-                goto finish;
-            }
-        }
-
         for (int i = 0; i < class_task->ctor_argc; ++i) {
             zval_dtor(zargs + i);
         }
 
         zval_dtor(&fci.function_name);
-        // dtor on retval?
+        efree(zargs);
+
+        // dtor retval too?
+
+        if (result == FAILURE) {
+            if (!EG(exception)) {
+                // @todo same exception throwing problem and constructor name as above?
+                zend_error_noreturn(E_CORE_ERROR, "Couldn't execute method %s%s%s", ZSTR_VAL(ce_name), "::", "__construct");
+                goto finish;
+            }
+        }
     }
 
     int result;
