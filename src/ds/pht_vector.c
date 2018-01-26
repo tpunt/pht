@@ -21,6 +21,14 @@
 #include "src/pht_entry.h"
 #include "src/ds/pht_vector.h"
 
+static void pht_vector_space_check(pht_vector_t *vector)
+{
+    if (vector->used == vector->size) {
+        vector->size = vector->size ? vector->size << 1 : 1;
+        vector->values = realloc(vector->values, vector->size * sizeof(pht_entry_t *)); // @todo success check
+    }
+}
+
 void pht_vector_init(pht_vector_t *vector, int size, void (*dtor)(void *))
 {
     vector->values = calloc(size, sizeof(pht_entry_t *));
@@ -31,10 +39,7 @@ void pht_vector_init(pht_vector_t *vector, int size, void (*dtor)(void *))
 
 void pht_vector_push(pht_vector_t *vector, pht_entry_t *value)
 {
-    if (vector->used == vector->size) {
-        vector->size <<= 1;
-        vector->values = realloc(vector->values, vector->size * sizeof(pht_entry_t *)); // @todo success check
-    }
+    pht_vector_space_check(vector);
 
     vector->values[vector->used++] = value;
 }
@@ -68,10 +73,7 @@ pht_entry_t *pht_vector_shift(pht_vector_t *vector)
 
 void pht_vector_unshift(pht_vector_t *vector, pht_entry_t *value)
 {
-    if (vector->used == vector->size) {
-        vector->size <<= 1;
-        vector->values = realloc(vector->values, vector->size * sizeof(pht_entry_t *)); // @todo success check
-    }
+    pht_vector_space_check(vector);
 
     for (int i = vector->used; i; --i) {
         vector->values[i] = vector->values[i - 1];
@@ -108,10 +110,7 @@ int pht_vector_insert_at(pht_vector_t *vector, pht_entry_t *value, zend_long i)
         return 0;
     }
 
-    if (vector->used == vector->size) {
-        vector->size <<= 1;
-        vector->values = realloc(vector->values, vector->size * sizeof(pht_entry_t *)); // @todo success check
-    }
+    pht_vector_space_check(vector);
 
     for (int i2 = vector->used; i2 > i; --i2) {
         vector->values[i2] = vector->values[i2 - 1];
