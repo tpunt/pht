@@ -145,7 +145,7 @@ void handle_class_task(class_task_t *class_task)
 
     if (constructor) {
         int result;
-        zval retval, zargs[class_task->ctor_argc];
+        zval retval, *zargs = emalloc(sizeof(zval) * class_task->ctor_argc); // VLAs not supported by VC15
         zend_fcall_info fci;
 
         fci.size = sizeof(fci);
@@ -270,7 +270,6 @@ void handle_thread_tasks(thread_obj_t *thread)
 
 void *worker_function(thread_obj_t *thread)
 {
-    thread->id = (ulong) pthread_self();
     thread->ls = ts_resource(0);
 
     TSRMLS_CACHE_UPDATE();

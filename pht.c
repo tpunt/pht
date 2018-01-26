@@ -21,6 +21,7 @@
 #endif
 
 #include <main/php.h>
+#include <main/SAPI.h>
 #include <ext/standard/info.h>
 
 #include "php_pht.h"
@@ -36,6 +37,8 @@
 
 ZEND_DECLARE_MODULE_GLOBALS(pht)
 
+static int (*sapi_module_deactivate)(void);
+
 PHP_MINIT_FUNCTION(pht)
 {
     threaded_ce_init();
@@ -47,11 +50,16 @@ PHP_MINIT_FUNCTION(pht)
     file_thread_ce_init();
     atomic_integer_ce_init();
 
+    sapi_module_deactivate = sapi_module.deactivate;
+    sapi_module.deactivate = NULL;
+
     return SUCCESS;
 }
 
 PHP_MSHUTDOWN_FUNCTION(pht)
 {
+    sapi_module.deactivate = sapi_module_deactivate;
+
     return SUCCESS;
 }
 

@@ -49,12 +49,12 @@ ZEND_END_ARG_INFO()
 
 PHP_METHOD(FileThread, __construct)
 {
-    zend_string *filename;
+    zend_string *filename, *resolved_path;
     zval *args;
     int argc = 0;
 
     ZEND_PARSE_PARAMETERS_START(1, -1)
-        Z_PARAM_STR(filename)
+        Z_PARAM_PATH_STR(filename)
         Z_PARAM_VARIADIC('*', args, argc)
     ZEND_PARSE_PARAMETERS_END();
 
@@ -63,21 +63,13 @@ PHP_METHOD(FileThread, __construct)
 
     task->type = FILE_TASK;
 
-    if (ZSTR_VAL(filename)[0] == '/') { // @todo Different for Windows...
-        pht_str_update(&task->t.file.name, ZSTR_VAL(filename), ZSTR_LEN(filename));
+    resolved_path = zend_resolve_path(ZSTR_VAL(filename), ZSTR_LEN(filename));
+
+    if (resolved_path) {
+        pht_str_update(&task->t.file.name, ZSTR_VAL(resolved_path), ZSTR_LEN(resolved_path));
+        zend_string_release(resolved_path);
     } else {
-        const char *current_filename = zend_get_executed_filename();
-        int i = strlen(current_filename) - 1;
-
-        while (i && current_filename[i] != '/') {
-            --i;
-        }
-
-        pht_str_set_len(&task->t.file.name, i + 1 + ZSTR_LEN(filename));
-
-        memcpy(PHT_STRV(task->t.file.name), current_filename, i);
-        PHT_STRV(task->t.file.name)[i] = '/';
-        memcpy(PHT_STRV(task->t.file.name) + i + 1, ZSTR_VAL(filename), ZSTR_LEN(filename));
+        pht_str_update(&task->t.file.name, ZSTR_VAL(filename), ZSTR_LEN(filename));
     }
 
     if (VCWD_ACCESS(PHT_STRV(task->t.file.name), F_OK) != 0) {

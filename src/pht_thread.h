@@ -71,7 +71,6 @@ typedef enum _pht_thread_type_t {
 
 typedef struct _thread_obj_t {
     pthread_t thread; // must be first member
-    int tid; // use thread as global in tls instead?
     zend_ulong id; // local storage ID used to fetch local storage data
     pthread_mutex_t lock;
     status_t status;

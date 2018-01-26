@@ -1,12 +1,32 @@
-// $Id$
-// vim:ft=javascript
+var PHT_EXT_NAME = "pht";
+var PHT_EXT_FLAGS = [
+    "/DZEND_ENABLE_STATIC_TSRMLS_CACHE=1",
+    "/DHAVE_STRUCT_TIMESPEC",
+    "/I" + configure_module_dirname
+].join(" ");
 
-// If your extension references something external, use ARG_WITH
-// ARG_WITH("pht", "for pht support", "no");
-
-// Otherwise, use ARG_ENABLE
-// ARG_ENABLE("pht", "enable pht support", "no");
+ARG_WITH("pht", "Pht support", "no");
 
 if (PHP_PHT != "no") {
-    EXTENSION("pht", "pht.c", PHP_EXTNAME_SHARED, "/DZEND_ENABLE_STATIC_TSRMLS_CACHE=1");
+    if (CHECK_HEADER_ADD_INCLUDE("pthread.h", "CFLAGS_PHT", PHP_PHT + ";" + configure_module_dirname)
+        && CHECK_LIB("pthreadVC2.lib", PHT_EXT_NAME, PHP_PHT)) {
+        EXTENSION(PHT_EXT_NAME, "pht.c", PHP_PHT_SHARED, PHT_EXT_FLAGS);
+        ADD_SOURCES(
+            configure_module_dirname + "/src",
+            "pht_copy.c pht_zend.c pht_entry.c pht_general.c pht_thread.c",
+            PHT_EXT_NAME
+        );
+        ADD_SOURCES(
+            configure_module_dirname + "/src/ds",
+            "pht_queue.c pht_hashtable.c pht_vector.c",
+            PHT_EXT_NAME
+        );
+        ADD_SOURCES(
+            configure_module_dirname + "/src/classes",
+            "thread.c threaded.c runnable.c queue.c hashtable.c vector.c file_thread.c atomic_integer.c",
+            PHT_EXT_NAME
+        );
+    } else {
+        WARNING("The pthreads-win32 library could not be found");
+    }
 }
