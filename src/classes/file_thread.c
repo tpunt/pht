@@ -82,15 +82,15 @@ PHP_METHOD(FileThread, __construct)
 
     if (VCWD_ACCESS(PHT_STRV(task->t.file.name), F_OK) != 0) {
         zend_throw_error(NULL, "The file '%s' does not exist", PHT_STRV(task->t.file.name));
-        free(task);
         free(PHT_STRV(task->t.file.name));
+        free(task);
         return;
     }
 
     if (VCWD_ACCESS(PHT_STRV(task->t.file.name), R_OK) != 0) {
         zend_throw_error(NULL, "The file '%s' is not readable", PHT_STRV(task->t.file.name));
-        free(task);
         free(PHT_STRV(task->t.file.name));
+        free(task);
         return;
     }
 
@@ -108,6 +108,7 @@ PHP_METHOD(FileThread, __construct)
                 }
 
                 free(task->t.file.args);
+                free(task);
                 return;
             }
         }
