@@ -128,6 +128,7 @@ class HashTable implements Threaded
 {
     public function lock(void) : void;
     public function unlock(void) : void;
+    public function size(void) : int;
     // ArrayAccess API is enabled, but the userland interface is not explicitly implemented
 }
 
@@ -145,6 +146,7 @@ class Vector implements Threaded
     public function lock(void) : void;
     public function unlock(void) : void;
     public function size(void) : int;
+    // ArrayAccess API is enabled, but the userland interface is not explicitly implemented
 }
 
 class AtomicInteger implements Threaded

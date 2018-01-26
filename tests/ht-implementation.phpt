@@ -34,7 +34,7 @@ $thread->start();
 
 while (true) {
     $ht->lock();
-    if (count($ht) === 4) {
+    if ($ht->size() === 4) {
         $ht->unlock();
         break;
     }

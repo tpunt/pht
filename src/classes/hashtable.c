@@ -277,15 +277,6 @@ HashTable *hto_get_debug_info(zval *zobj, int *is_temp)
     return zht;
 }
 
-int hto_count_elements(zval *zobj, zend_long *count)
-{
-    hashtable_obj_t *hto = (hashtable_obj_t *)((char *)Z_OBJ_P(zobj) - Z_OBJ_P(zobj)->handlers->offset);
-
-    *count = hto->htoi->hashtable.used;
-
-    return SUCCESS;
-}
-
 ZEND_BEGIN_ARG_INFO_EX(HashTable_lock_arginfo, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
@@ -314,9 +305,24 @@ PHP_METHOD(HashTable, unlock)
     pthread_mutex_unlock(&hto->htoi->lock);
 }
 
+ZEND_BEGIN_ARG_INFO_EX(HashTable_size_arginfo, 0, 0, 0)
+ZEND_END_ARG_INFO()
+
+PHP_METHOD(HashTable, size)
+{
+    hashtable_obj_t *hto = (hashtable_obj_t *)((char *)Z_OBJ(EX(This)) - Z_OBJ(EX(This))->handlers->offset);
+
+    if (zend_parse_parameters_none() != SUCCESS) {
+        return;
+    }
+
+    RETVAL_LONG(hto->htoi->hashtable.used);
+}
+
 zend_function_entry HashTable_methods[] = {
     PHP_ME(HashTable, lock, HashTable_lock_arginfo, ZEND_ACC_PUBLIC)
     PHP_ME(HashTable, unlock, HashTable_unlock_arginfo, ZEND_ACC_PUBLIC)
+    PHP_ME(HashTable, size, HashTable_size_arginfo, ZEND_ACC_PUBLIC)
     PHP_FE_END
 };
 
@@ -355,7 +361,6 @@ void hashtable_ce_init(void)
     hash_table_handlers.read_dimension = hto_read_dimension;
     hash_table_handlers.write_dimension = hto_write_dimension;
     hash_table_handlers.get_debug_info = hto_get_debug_info;
-    hash_table_handlers.count_elements = hto_count_elements;
     hash_table_handlers.get_properties = hto_get_properties;
     hash_table_handlers.has_dimension = hto_has_dimension;
     hash_table_handlers.unset_dimension = hto_unset_dimension;
