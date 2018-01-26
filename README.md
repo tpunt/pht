@@ -5,11 +5,27 @@ This extension exposes a new approach to threading in PHP. Everything and anythi
 Quick feature list:
  - Classes, functions, and files may be threaded
  - The inter-thread communication (ITC) data structures include: hash table, queue, vector
- - Threads are always reusable for any number of tasks
+ - Threads are reusable for any number of tasks
 
 Requirements:
  - A ZTS version of PHP 7.2. The master branch of php-src is not currently compatible
- - A Unix-based OS. Windows is not currently supported
+
+Any Unix-based OS is supported (including OS X), along with Windows. This extension was explicitly tested on OS X (Yosemite), Ubuntu 14.04 (32bit), and Windows Server 2012 (the pthreads-win32 library is needed).
+
+Contents:
+ - [The Basics](https://github.com/tpunt/pht#the-basics)
+ - [API](https://github.com/tpunt/pht#api)
+ - [Quick Examples](https://github.com/tpunt/pht#quick-examples)
+   - [Threading Types](https://github.com/tpunt/pht#threading-types)
+     - [Class Threading](https://github.com/tpunt/pht#class-threading)
+     - [Function Threading](https://github.com/tpunt/pht#function-threading)
+     - [File Threading](https://github.com/tpunt/pht#file-threading)
+   - [Inter-Thread Communication Data Structures](https://github.com/tpunt/pht#inter-thread-communication-data-structures)
+     - [Queue](https://github.com/tpunt/pht#queue)
+     - [Vector](https://github.com/tpunt/pht#vector)
+     - [Hash Table](https://github.com/tpunt/pht#hash-table)
+   - [Atomic Values](https://github.com/tpunt/pht#atomic-values)
+     - [Atomic Integer](https://github.com/tpunt/pht#atomic-integer)
 
 ## The Basics
 
@@ -368,7 +384,7 @@ for ($i = 0; $i < $hashTableItemCount; ++$i) {
 
 ### Atomic Values
 
-Atomic values are classes that wrap simple values. These values are safe to update without acquiring mutex locks, but they also pack with them mutex locks should multiple actions need to be performed one said value. The mutex locks, for this reason, are reentrant.
+Atomic values are classes that wrap simple values. These values are safe to update without acquiring mutex locks, but they also pack with them mutex locks should multiple operations need to be performed together. The mutex locks, for this reason, are reentrant.
 
 #### Atomic Integer
 
