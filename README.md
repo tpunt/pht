@@ -155,7 +155,7 @@ class AtomicInteger implements Threaded
     public function get(void) : int;
     public function set(int $value) : void;
     public function inc(void) : void;
-    public function dev(void) : void;
+    public function dec(void) : void;
     public function lock(void) : void;
     public function unlock(void) : void;
 }

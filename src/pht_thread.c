@@ -115,7 +115,9 @@ void thread_join_destroy(zval *zthread)
         return;
     }
 
+    pthread_mutex_lock(&thread->lock);
     thread->status = JOINED;
+    pthread_mutex_unlock(&thread->lock);
 
     pthread_join(thread->thread, NULL);
 
@@ -302,7 +304,7 @@ void *worker_function(thread_obj_t *thread)
     }
 
     pthread_mutex_lock(&thread->lock);
-    if (thread->status == NOT_STARTED) {
+    if (thread->status == STARTING_UP) { // it could also be JOINED
         thread->status = STARTED;
     }
     pthread_mutex_unlock(&thread->lock);

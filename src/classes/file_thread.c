@@ -122,6 +122,8 @@ PHP_METHOD(FileThread, start)
         return;
     }
 
+    thread->status = STARTING_UP;
+
     pthread_create((pthread_t *)thread, NULL, (void *)worker_function, thread);
 }
 

@@ -60,6 +60,7 @@ typedef struct _task_t {
 
 typedef enum _status_t {
     NOT_STARTED,
+    STARTING_UP,
     STARTED,
     JOINED
 } status_t;
