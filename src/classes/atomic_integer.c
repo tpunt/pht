@@ -62,9 +62,6 @@ static zend_object *atomic_integer_ctor(zend_class_entry *entry)
 
 void aio_dtor_obj(zend_object *obj)
 {
-    atomic_integer_obj_t *aio = (atomic_integer_obj_t *)((char *)obj - obj->handlers->offset);
-
-    zend_hash_index_del(&PHT_ZG(itc_ds), (zend_ulong)aio->aioi);
     zend_object_std_dtor(obj);
 }
 

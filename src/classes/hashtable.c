@@ -63,9 +63,6 @@ static zend_object *hash_table_ctor(zend_class_entry *entry)
 
 void hto_dtor_obj(zend_object *obj)
 {
-    hashtable_obj_t *hto = (hashtable_obj_t *)((char *)obj - obj->handlers->offset);
-
-    zend_hash_index_del(&PHT_ZG(itc_ds), (zend_ulong)hto->htoi);
     zend_object_std_dtor(obj);
 }
 

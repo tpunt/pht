@@ -68,7 +68,6 @@ PHP_RINIT_FUNCTION(pht)
     ZEND_TSRMLS_CACHE_UPDATE();
 
     zend_hash_init(&PHT_ZG(op_array_file_names), 8, NULL, ZVAL_PTR_DTOR, 0);
-    zend_hash_init(&PHT_ZG(itc_ds), 8, NULL, ZVAL_PTR_DTOR, 0);
     zend_hash_init(&PHT_ZG(child_threads), 8, NULL, thread_join_destroy, 0);
     PHT_ZG(skip_qoi_creation) = 0;
     PHT_ZG(skip_htoi_creation) = 0;
@@ -81,7 +80,6 @@ PHP_RINIT_FUNCTION(pht)
 PHP_RSHUTDOWN_FUNCTION(pht)
 {
     zend_hash_destroy(&PHT_ZG(op_array_file_names));
-    zend_hash_destroy(&PHT_ZG(itc_ds));
     zend_hash_destroy(&PHT_ZG(child_threads));
 
     return SUCCESS;
