@@ -4,12 +4,14 @@ thread and putting some data into an ITC DS) handle failure correctly.
 --FILE--
 <?php
 
+use pht\{Thread, Runnable, Vector};
+
 class Test implements Runnable
 {
     public function run(){}
 }
 
-$thread = new thread();
+$thread = new Thread();
 
 try {
     $thread->addTask(Test::class, fopen(__FILE__, 'r'));
@@ -36,10 +38,10 @@ serialize($thread); // deliberate non-catch
 --EXPECTF--
 string(51) "Failed to serialise argument 1 of Thread::addTask()"
 string(29) "Failed to serialise the value"
-string(40) "Serialization of 'Thread' is not allowed"
+string(44) "Serialization of 'pht\Thread' is not allowed"
 
-Fatal error: Uncaught Exception: Serialization of 'Thread' is not allowed in %s:%d
+Fatal error: Uncaught Exception: Serialization of 'pht\Thread' is not allowed in %s:%d
 Stack trace:
-#0 %s(%d): serialize(Object(Thread))
+#0 %s(%d): serialize(Object(pht\Thread))
 #1 {main}
   thrown in %s on line %d

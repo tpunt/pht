@@ -3,6 +3,8 @@ Ensure correct copying of local static variables.
 --FILE--
 <?php
 
+use pht\{Thread, Runnable};
+
 const A = 1;
 const C = ['a', 1, 'B', false, 'D'];
 const D = ['a', 1, 'B'];

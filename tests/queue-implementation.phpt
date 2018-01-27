@@ -3,6 +3,8 @@ Testing the Queue data structure implementation
 --FILE--
 <?php
 
+use pht\{Thread, Runnable, Queue};
+
 class Test implements Runnable
 {
     private $q;
@@ -77,17 +79,17 @@ try {
 --EXPECT--
 int(1)
 int(1)
-object(Queue)#1 (2) {
+object(pht\Queue)#1 (2) {
   [0]=>
   int(1)
   [1]=>
   int(1)
 }
-object(Queue)#1 (1) {
+object(pht\Queue)#1 (1) {
   [0]=>
   int(1)
 }
-object(Queue)#1 (2) {
+object(pht\Queue)#1 (2) {
   [0]=>
   int(1)
   [1]=>

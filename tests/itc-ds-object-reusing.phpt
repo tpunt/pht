@@ -3,6 +3,8 @@ Testing the object reusing logic for the ITC DSs
 --FILE--
 <?php
 
+use pht\{Thread, Queue, HashTable};
+
 $thread = new Thread();
 $q = new Queue();
 
@@ -35,15 +37,15 @@ $thread->join();
 var_dump($q, $ht);
 
 --EXPECT--
-object(Queue)#2 (2) {
+object(pht\Queue)#2 (2) {
   [0]=>
   int(1)
   [1]=>
   int(2)
 }
-object(Queue)#1 (1) {
+object(pht\Queue)#1 (1) {
   [0]=>
-  object(HashTable)#4 (5) {
+  object(pht\HashTable)#4 (5) {
     [0]=>
     int(0)
     [1]=>
@@ -56,7 +58,7 @@ object(Queue)#1 (1) {
     int(4)
   }
 }
-object(HashTable)#2 (5) {
+object(pht\HashTable)#2 (5) {
   [0]=>
   int(0)
   [1]=>

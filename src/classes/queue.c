@@ -242,7 +242,7 @@ void queue_ce_init(void)
     zend_class_entry ce;
     zend_object_handlers *zh = zend_get_std_object_handlers();
 
-    INIT_CLASS_ENTRY(ce, "Queue", Queue_methods);
+    INIT_CLASS_ENTRY(ce, "pht\\Queue", Queue_methods);
     Queue_ce = zend_register_internal_class(&ce);
     Queue_ce->create_object = queue_ctor;
     Queue_ce->ce_flags |= ZEND_ACC_FINAL;

@@ -50,7 +50,7 @@ void threaded_ce_init(void)
 {
     zend_class_entry ce;
 
-    INIT_CLASS_ENTRY(ce, "Threaded", Threaded_methods);
+    INIT_CLASS_ENTRY(ce, "pht\\Threaded", Threaded_methods);
     Threaded_ce = zend_register_internal_interface(&ce);
     Threaded_ce->interface_gets_implemented = threaded_interface_gets_implemented;
 }

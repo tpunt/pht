@@ -337,7 +337,7 @@ void hashtable_ce_init(void)
     zend_class_entry ce;
     zend_object_handlers *zh = zend_get_std_object_handlers();
 
-    INIT_CLASS_ENTRY(ce, "HashTable", HashTable_methods);
+    INIT_CLASS_ENTRY(ce, "pht\\HashTable", HashTable_methods);
     HashTable_ce = zend_register_internal_class(&ce);
     HashTable_ce->create_object = hash_table_ctor;
     HashTable_ce->ce_flags |= ZEND_ACC_FINAL;

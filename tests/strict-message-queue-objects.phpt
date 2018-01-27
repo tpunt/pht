@@ -3,6 +3,8 @@ Be strict on what Queue objects can and cannot do.
 --FILE--
 <?php
 
+use pht\Queue;
+
 $q = new Queue();
 
 try {

@@ -35,6 +35,8 @@ If we are dealing with a `Thread`, then we add tasks to the thread's internal ta
 ```php
 <?php
 
+use pht\{Thread, Runnable};
+
 class Task implements Runnable
 {
     public function run() {}
@@ -42,8 +44,9 @@ class Task implements Runnable
 
 $thread = new Thread();
 
-// Thread::addTask(string $className, mixed ...$constructorArgs)
+// Thread::addTask(string $className, mixed ...$constructorArgs);
 $thread->addTask(Task::class);
+// Thread::addFunctionTask(callable $fn, mixed ...$fnArgs);
 $thread->addFunctionTask(function () {});
 
 $thread->start();
@@ -55,6 +58,8 @@ The class to be threaded will be instantiated inside of the new thread, where it
 If we are dealing with a `FileThread`, then we simply specify the name of the file we would like to thread:
 ```php
 <?php
+
+use pht\FileThread;
 
 // FileThread::__construct(string $filename, mixed ...$globals);
 $fileThread = new FileThread('some_file.php', 1, 2, 3);
@@ -85,6 +90,8 @@ This means that the serialisation points to be aware of are:
 
 ```php
 <?php
+
+namespace pht;
 
 class Thread
 {
@@ -174,6 +181,8 @@ Classes that will be threaded need to implement the `Runnable` interface.
 ```php
 <?php
 
+use pht\{Thread, Runnable};
+
 class Task implements Runnable
 {
     private $one;
@@ -207,6 +216,8 @@ Functions must not refer to `$this` (it will become `null` in the threaded conte
 ```php
 <?php
 
+use pht\Thread;
+
 class Test
 {
     public static function run(){var_dump(5);}
@@ -215,7 +226,7 @@ class Test
 
 function aFunc(){var_dump(3);}
 
-$thread = new thread();
+$thread = new Thread();
 
 // Thread::addFunctionTask(callable $fn, mixed ...$fnArgs);
 $thread->addFunctionTask(static function($one) {var_dump($one);}, 1);
@@ -238,11 +249,12 @@ To pass data to the file being threaded, pass them through the `FileThread` cons
 ```php
 <?php
 
-// FileThread::__construct(string $filename, mixed ...$globals);
-$ft = new FileThread('file.php', 1, 2, 3);
+use pht\FileThread;
 
-$ft->start();
-$ft->join();
+$fileThread = new FileThread('file.php', 1, 2, 3);
+
+$fileThread->start();
+$fileThread->join();
 ```
 
 `file.php`
@@ -274,6 +286,8 @@ Things to note:
 
 ```php
 <?php
+
+use pht\{Thread, Queue};
 
 $thread = new Thread();
 $queue = new Queue();
@@ -313,6 +327,8 @@ while ($queue->size()) {
 ```php
 <?php
 
+use pht\{Thread, Vector};
+
 $thread = new Thread();
 $vector = new Vector();
 $vectorItemCount = 5;
@@ -351,6 +367,8 @@ for ($i = 0; $i < $vectorItemCount; ++$i) {
 ```php
 <?php
 
+use pht\{Thread, HashTable};
+
 $thread = new Thread();
 $hashTable = new HashTable();
 $hashTableItemCount = 5;
@@ -368,7 +386,7 @@ $thread->start();
 while (true) {
     $hashTable->lock();
 
-    if (count($hashTable) === $hashTableItemCount) {
+    if ($hashTable->size() === $hashTableItemCount) {
         $hashTable->unlock();
         break;
     }
@@ -392,6 +410,8 @@ Atomic values are classes that wrap simple values. These values are safe to upda
 
 ```php
 <?php
+
+use pht\{Thread, AtomicInteger};
 
 $thread = new Thread();
 $atomicInteger = new AtomicInteger();

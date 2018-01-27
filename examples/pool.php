@@ -1,5 +1,7 @@
 <?php
 
+use pht\{Thread, Runnable, Queue};
+
 class Task implements Runnable
 {
     private $q;

@@ -613,7 +613,7 @@ void vector_ce_init(void)
     zend_class_entry ce;
     zend_object_handlers *zh = zend_get_std_object_handlers();
 
-    INIT_CLASS_ENTRY(ce, "Vector", Vector_methods);
+    INIT_CLASS_ENTRY(ce, "pht\\Vector", Vector_methods);
     Vector_ce = zend_register_internal_class(&ce);
     Vector_ce->create_object = vector_ctor;
     Vector_ce->ce_flags |= ZEND_ACC_FINAL;

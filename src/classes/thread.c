@@ -230,7 +230,7 @@ void thread_ce_init(void)
     zend_class_entry ce;
     zend_object_handlers *zh = zend_get_std_object_handlers();
 
-    INIT_CLASS_ENTRY(ce, "Thread", Thread_methods);
+    INIT_CLASS_ENTRY(ce, "pht\\Thread", Thread_methods);
     Thread_ce = zend_register_internal_class(&ce);
     Thread_ce->create_object = thread_ctor;
     Thread_ce->serialize = zend_class_serialize_deny;

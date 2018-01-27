@@ -35,6 +35,6 @@ void runnable_ce_init(void)
 {
     zend_class_entry ce;
 
-    INIT_CLASS_ENTRY(ce, "Runnable", Runnable_methods);
+    INIT_CLASS_ENTRY(ce, "pht\\Runnable", Runnable_methods);
     Runnable_ce = zend_register_internal_interface(&ce);
 }

@@ -155,7 +155,7 @@ void file_thread_ce_init(void)
     zend_class_entry ce;
     zend_object_handlers *zh = zend_get_std_object_handlers();
 
-    INIT_CLASS_ENTRY(ce, "FileThread", FileThread_methods);
+    INIT_CLASS_ENTRY(ce, "pht\\FileThread", FileThread_methods);
     FileThread_ce = zend_register_internal_class(&ce);
     FileThread_ce->create_object = file_thread_ctor;
     FileThread_ce->ce_flags |= ZEND_ACC_FINAL;

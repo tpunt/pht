@@ -3,6 +3,8 @@ Ensure file threading works correctly.
 --FILE--
 <?php
 
+use pht\{FileThread, Vector, HashTable, Queue};
+
 $vector = new Vector();
 $hashTable = new HashTable();
 $queue = new Queue();
@@ -14,21 +16,21 @@ $ft->join();
 
 var_dump($vector, $hashTable, $queue);
 --EXPECT--
-object(Vector)#1 (0) {
+object(pht\Vector)#1 (0) {
 }
-object(HashTable)#2 (0) {
+object(pht\HashTable)#2 (0) {
 }
-object(Queue)#3 (0) {
+object(pht\Queue)#3 (0) {
 }
-object(Vector)#1 (1) {
+object(pht\Vector)#1 (1) {
   [0]=>
   int(1)
 }
-object(HashTable)#2 (1) {
+object(pht\HashTable)#2 (1) {
   ["a"]=>
   int(1)
 }
-object(Queue)#3 (1) {
+object(pht\Queue)#3 (1) {
   [0]=>
   int(1)
 }

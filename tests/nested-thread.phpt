@@ -3,6 +3,8 @@ Testing nesting a thread.
 --FILE--
 <?php
 
+use pht\{Thread, Runnable};
+
 class Test2 implements Runnable
 {
     public function run()

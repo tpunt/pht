@@ -222,7 +222,7 @@ void atomic_integer_ce_init(void)
     zend_class_entry ce;
     zend_object_handlers *zh = zend_get_std_object_handlers();
 
-    INIT_CLASS_ENTRY(ce, "AtomicInteger", AtomicInteger_methods);
+    INIT_CLASS_ENTRY(ce, "pht\\AtomicInteger", AtomicInteger_methods);
     AtomicInteger_ce = zend_register_internal_class(&ce);
     AtomicInteger_ce->create_object = atomic_integer_ctor;
     AtomicInteger_ce->ce_flags |= ZEND_ACC_FINAL;

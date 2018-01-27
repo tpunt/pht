@@ -3,6 +3,8 @@ Ensure function threading works correctly.
 --FILE--
 <?php
 
+use pht\Thread;
+
 class Test2
 {
     public static function run(){var_dump('Test 4');}
@@ -11,7 +13,7 @@ class Test2
 
 function a(){var_dump('Test 3');}
 
-$thread = new thread();
+$thread = new Thread();
 
 $thread->addFunctionTask(static function() {var_dump('Test 1');});
 $thread->addFunctionTask(function() {var_dump('Test 2');});

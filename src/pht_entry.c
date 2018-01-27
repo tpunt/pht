@@ -147,7 +147,7 @@ void pht_convert_entry_to_zval(zval *value, pht_entry_t *e)
             break;
         case PHT_QUEUE:
             {
-                zend_string *ce_name = zend_string_init("Queue", sizeof("Queue") - 1, 0);
+                zend_string *ce_name = zend_string_init("pht\\Queue", sizeof("pht\\Queue") - 1, 0);
                 zend_class_entry *ce = zend_lookup_class(ce_name);
                 zval zobj;
 
@@ -175,7 +175,7 @@ void pht_convert_entry_to_zval(zval *value, pht_entry_t *e)
             break;
         case PHT_HASH_TABLE:
             {
-                zend_string *ce_name = zend_string_init("HashTable", sizeof("HashTable") - 1, 0);
+                zend_string *ce_name = zend_string_init("pht\\HashTable", sizeof("pht\\HashTable") - 1, 0);
                 zend_class_entry *ce = zend_lookup_class(ce_name);
                 zval zobj;
 
@@ -203,7 +203,7 @@ void pht_convert_entry_to_zval(zval *value, pht_entry_t *e)
             break;
         case PHT_VECTOR:
             {
-                zend_string *ce_name = zend_string_init("Vector", sizeof("Vector") - 1, 0);
+                zend_string *ce_name = zend_string_init("pht\\Vector", sizeof("pht\\Vector") - 1, 0);
                 zend_class_entry *ce = zend_lookup_class(ce_name);
                 zval zobj;
 
@@ -231,7 +231,7 @@ void pht_convert_entry_to_zval(zval *value, pht_entry_t *e)
             break;
         case PHT_ATOMIC_INTEGER:
             {
-                zend_string *ce_name = zend_string_init("AtomicInteger", sizeof("AtomicInteger") - 1, 0);
+                zend_string *ce_name = zend_string_init("pht\\AtomicInteger", sizeof("pht\\AtomicInteger") - 1, 0);
                 zend_class_entry *ce = zend_lookup_class(ce_name);
                 zval zobj;
 

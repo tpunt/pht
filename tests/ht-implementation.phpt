@@ -3,6 +3,8 @@ Testing the HT data structure implementation
 --FILE--
 <?php
 
+use pht\{Thread, Runnable, HashTable};
+
 class Test implements Runnable
 {
     private $ht, $str;
@@ -61,7 +63,7 @@ $ht->unlock();
 
 $thread->join();
 --EXPECT--
-object(HashTable)#2 (4) {
+object(pht\HashTable)#2 (4) {
   [0]=>
   int(0)
   [1]=>
@@ -85,7 +87,7 @@ bool(true)
 bool(true)
 bool(true)
 bool(false)
-object(HashTable)#2 (3) {
+object(pht\HashTable)#2 (3) {
   [0]=>
   int(0)
   [1]=>

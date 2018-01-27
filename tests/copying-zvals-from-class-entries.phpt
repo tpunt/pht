@@ -4,6 +4,8 @@ property and static property tables, along with class constants.
 --FILE--
 <?php
 
+use pht\{Thread, Runnable};
+
 class Test2
 {
     public const A = [
@@ -35,7 +37,7 @@ class Test implements Runnable
     }
 }
 
-$thread = new thread();
+$thread = new Thread();
 
 $thread->addTask(Test::class);
 $thread->start();

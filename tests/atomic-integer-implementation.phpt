@@ -3,6 +3,8 @@ Testing the AtomicInteger class implementation
 --FILE--
 <?php
 
+use pht\{Thread, AtomicInteger};
+
 $thread = new Thread();
 $startingN = 5;
 $atomicInteger = new AtomicInteger(5);
@@ -40,11 +42,11 @@ $atomicInteger->inc();
 var_dump($atomicInteger);
 --EXPECT--
 int(105)
-object(AtomicInteger)#2 (1) {
+object(pht\AtomicInteger)#2 (1) {
   ["value"]=>
   int(105)
 }
-object(AtomicInteger)#2 (1) {
+object(pht\AtomicInteger)#2 (1) {
   ["value"]=>
   int(106)
 }

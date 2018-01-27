@@ -3,6 +3,8 @@ Testing the vector data structure implementation
 --FILE--
 <?php
 
+use pht\{Thread, Runnable, Vector};
+
 class Test implements Runnable
 {
     private $v;
@@ -90,17 +92,17 @@ var_dump($v);
 $v->resize(5);
 var_dump($v);
 --EXPECT--
-object(Vector)#1 (2) {
+object(pht\Vector)#1 (2) {
   [0]=>
   int(1)
   [1]=>
   int(1)
 }
-object(Vector)#1 (1) {
+object(pht\Vector)#1 (1) {
   [0]=>
   int(1)
 }
-object(Vector)#1 (2) {
+object(pht\Vector)#1 (2) {
   [0]=>
   int(2)
   [1]=>
@@ -109,7 +111,7 @@ object(Vector)#1 (2) {
 string(48) "Attempted to pop an element from an empty vector"
 string(50) "Attempted to shift an element from an empty vector"
 string(58) "Attempted to delete an element from an out-of-bounds index"
-object(Vector)#1 (2) {
+object(pht\Vector)#1 (2) {
   [0]=>
   int(0)
   [1]=>
@@ -121,25 +123,25 @@ bool(false)
 bool(true)
 bool(false)
 bool(true)
-object(Vector)#1 (2) {
+object(pht\Vector)#1 (2) {
   [0]=>
   int(2)
   [1]=>
   int(0)
 }
-object(Vector)#1 (2) {
+object(pht\Vector)#1 (2) {
   [0]=>
   int(2)
   [1]=>
   int(3)
 }
-object(Vector)#4 (2) {
+object(pht\Vector)#4 (2) {
   [0]=>
   int(100)
   [1]=>
   int(100)
 }
-object(Vector)#4 (3) {
+object(pht\Vector)#4 (3) {
   [0]=>
   int(100)
   [1]=>
@@ -147,7 +149,7 @@ object(Vector)#4 (3) {
   [2]=>
   int(101)
 }
-object(Vector)#4 (3) {
+object(pht\Vector)#4 (3) {
   [0]=>
   int(99)
   [1]=>
@@ -155,7 +157,7 @@ object(Vector)#4 (3) {
   [2]=>
   int(101)
 }
-object(Vector)#1 (4) {
+object(pht\Vector)#1 (4) {
   [0]=>
   int(1)
   [1]=>
@@ -165,7 +167,7 @@ object(Vector)#1 (4) {
   [3]=>
   int(1)
 }
-object(Vector)#1 (3) {
+object(pht\Vector)#1 (3) {
   [0]=>
   int(1)
   [1]=>
@@ -173,7 +175,7 @@ object(Vector)#1 (3) {
   [2]=>
   int(1)
 }
-object(Vector)#1 (5) {
+object(pht\Vector)#1 (5) {
   [0]=>
   int(1)
   [1]=>
