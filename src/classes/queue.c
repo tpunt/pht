@@ -62,6 +62,9 @@ static zend_object *queue_ctor(zend_class_entry *entry)
 
 void qo_dtor_obj(zend_object *obj)
 {
+    queue_obj_t *qo = (queue_obj_t *)((char *)obj - obj->handlers->offset);
+
+    zend_hash_index_del(&PHT_ZG(itc_ds), (zend_ulong)qo->qoi);
     zend_object_std_dtor(obj);
 }
 
@@ -72,12 +75,6 @@ void qo_free_obj(zend_object *obj)
     pthread_mutex_lock(&qo->qoi->lock);
     --qo->qoi->refcount;
     pthread_mutex_unlock(&qo->qoi->lock);
-
-    // We don't remove the object from PHT_ZG(itc_ds), as this causes problems
-    // with file threads (due to RINIT being invoked before zend_objects_store_free_object_storage,
-    // causing the itc_ds HT to be destroyed before this object's function has
-    // been invoked.
-    // zend_hash_index_del(&PHT_ZG(itc_ds), (zend_ulong)qo->qoi);
 
     if (!qo->qoi->refcount) {
         qoi_free(qo->qoi);

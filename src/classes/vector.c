@@ -63,6 +63,9 @@ static zend_object *vector_ctor(zend_class_entry *entry)
 
 void vo_dtor_obj(zend_object *obj)
 {
+    vector_obj_t *vo = (vector_obj_t *)((char *)obj - obj->handlers->offset);
+
+    zend_hash_index_del(&PHT_ZG(itc_ds), (zend_ulong)vo->voi);
     zend_object_std_dtor(obj);
 }
 
@@ -73,12 +76,6 @@ void vo_free_obj(zend_object *obj)
     pthread_mutex_lock(&vo->voi->lock);
     --vo->voi->refcount;
     pthread_mutex_unlock(&vo->voi->lock);
-
-    // We don't remove the object from PHT_ZG(itc_ds), as this causes problems
-    // with file threads (due to RINIT being invoked before zend_objects_store_free_object_storage,
-    // causing the itc_ds HT to be destroyed before this object's function has
-    // been invoked.
-    // zend_hash_index_del(&PHT_ZG(itc_ds), (zend_ulong)vo->voi);
 
     if (!vo->voi->refcount) {
         voi_free(vo->voi);

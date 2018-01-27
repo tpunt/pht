@@ -62,6 +62,9 @@ static zend_object *atomic_integer_ctor(zend_class_entry *entry)
 
 void aio_dtor_obj(zend_object *obj)
 {
+    atomic_integer_obj_t *aio = (atomic_integer_obj_t *)((char *)obj - obj->handlers->offset);
+
+    zend_hash_index_del(&PHT_ZG(itc_ds), (zend_ulong)aio->aioi);
     zend_object_std_dtor(obj);
 }
 
@@ -72,12 +75,6 @@ void aio_free_obj(zend_object *obj)
     pthread_mutex_lock(&aio->aioi->lock);
     --aio->aioi->refcount;
     pthread_mutex_unlock(&aio->aioi->lock);
-
-    // We don't remove the object from PHT_ZG(itc_ds), as this causes problems
-    // with file threads (due to RINIT being invoked before zend_objects_store_free_object_storage,
-    // causing the itc_ds HT to be destroyed before this object's function has
-    // been invoked.
-    // zend_hash_index_del(&PHT_ZG(itc_ds), (zend_ulong)aio->aioi);
 
     if (!aio->aioi->refcount) {
         aioi_free(aio->aioi);
