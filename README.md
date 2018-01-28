@@ -29,9 +29,9 @@ Contents:
 
 ## The Basics
 
-This approach to threading abstracts away the thread itself behind a dedicated object (either a `Thread` or `FileThread`).
+This approach to threading abstracts away the thread itself behind a dedicated object (`Thread`), where tasks are added to that thread's internal task queue.
 
-If we are dealing with a `Thread`, then we add tasks to the thread's internal task queue:
+Example:
 ```php
 <?php
 
@@ -44,37 +44,32 @@ class Task implements Runnable
 
 $thread = new Thread();
 
-// Thread::addTask(string $className, mixed ...$constructorArgs);
+// Thread::addTask(string $className, mixed ...$constructorArgs) : void;
 $thread->addTask(Task::class);
-// Thread::addFunctionTask(callable $fn, mixed ...$fnArgs);
-$thread->addFunctionTask(function () {});
+
+// Thread::addFunctionTask(callable $fn, mixed ...$fnArgs) : void;
+$thread->addFunctionTask(function ($zero) {var_dump($zero);}, 0);
+
+// Thread::addFileTask(string $filename, mixed ...$globals) : void;
+$thread->addFileTask('some_file.php', 1, 2, 3);
 
 $thread->start();
 $thread->join();
 ```
 
-The class to be threaded will be instantiated inside of the new thread, where it will execute in isolation without being passed around between threads.
-
-If we are dealing with a `FileThread`, then we simply specify the name of the file we would like to thread:
+`some_file.php`:
 ```php
-<?php
-
-use pht\FileThread;
-
-// FileThread::__construct(string $filename, mixed ...$globals);
-$fileThread = new FileThread('some_file.php', 1, 2, 3);
-
-$fileThread->start();
-$fileThread->join();
-
-
-/* some_file.php */
 <?php
 
 [$one, $two, $three] = $_THREAD;
 ```
 
-By keeping the threading contexts completely separate from one-another, we prevent the need to serialise the properties of threaded objects (a necessary evil if such objects had to operate in multiple threads, as seen in pthreads).
+The task types have the following properties:
+ - Class tasks will be instantiated inside of the new thread
+ - Function tasks will be serialised and passed into the new thread
+ - File tasks will open the new file inside of the new thread
+
+All of these tasks will execute in isolation. In particular for class tasks, it means the spawned objects cannot be passed around between threads. By keeping the threading contexts completely separate from one-another, we prevent the need to serialise the properties of threaded objects (a necessary evil if such objects had to operate in multiple threads, as seen in pthreads).
 
 Given the isolation of threaded contexts, we have a new problem: how can data be passed between threads? To solve this problem, threadable data structures have been implemented, where mutex locks have been exposed to the programmer for greater control over them. Whilst this has increased the complexity a bit for the programmer, it has also increased the flexibility, too.
 
@@ -83,7 +78,7 @@ So far, the following data structures have been implemented: queue, hash table, 
 With this approach to threading, only the given built-in data structures need to be safely passed around between threads.
 
 This means that the serialisation points to be aware of are:
- - The arguments being passed to `Thread::addTask()` and `FileThread::__construct()`
+ - The arguments being passed to `Thread::addTask()` `Thread::addFunctionTask()`, and `Thread::addFileTask()`
  - The values being placed into the ITC-based data structures
 
 ## API
@@ -95,23 +90,17 @@ namespace pht;
 
 class Thread
 {
-    public function addTask(string $className, mixed ...$ctorArgs);
-    public function addFunctionTask(callable $fn, mixed ...$fnArgs);
+    public function addTask(string $className, mixed ...$ctorArgs) : void;
+    public function addFunctionTask(callable $fn, mixed ...$fnArgs) : void;
+    public function addFileTask(string $filename, mixed ...$globals) : void;
     public function taskCount(void) : int;
-    public function start(void) : void;
-    public function join(void) : void;
-}
-
-class FileThread
-{
-    public function __construct(string $filename, mixed ...$globals);
     public function start(void) : void;
     public function join(void) : void;
 }
 
 interface Runnable
 {
-    public function run(void) void;
+    public function run(void) : void;
 }
 
 // internal interface, not implementable by userland PHP classes
@@ -142,7 +131,7 @@ class HashTable implements Threaded
 class Vector implements Threaded
 {
     public function __construct([int $size = 0 [, mixed $defaultValue = 0]]);
-    public function resize(int $size [, mixed $defaultValue = 0]);
+    public function resize(int $size [, mixed $defaultValue = 0]) : void;
     public function push(mixed $value) : void;
     public function pop(void) : mixed;
     public function shift(void) : mixed;
@@ -200,7 +189,6 @@ class Task implements Runnable
 
 $thread = new Thread();
 
-// Thread::addTask(string $className, mixed ...$ctorArgs);
 $thread->addTask(Task::class, 1);
 
 $thread->start();
@@ -228,7 +216,6 @@ function aFunc(){var_dump(3);}
 
 $thread = new Thread();
 
-// Thread::addFunctionTask(callable $fn, mixed ...$fnArgs);
 $thread->addFunctionTask(static function($one) {var_dump($one);}, 1);
 $thread->addFunctionTask(function() {var_dump(2);});
 $thread->addFunctionTask('aFunc');
@@ -244,17 +231,19 @@ All `$fnArgs` being passed into the `Thread::addFunctionTask()` method will be s
 
 #### File Threading
 
-To pass data to the file being threaded, pass them through the `FileThread` constructor. They will then become available in a special `$_THREAD` superglobals array inside of the threaded file.
+To pass data to the file being threaded, pass them as additional arguments to the `Thread::addFileTask()` method. They will then become available in a special `$_THREAD` superglobals array inside of the threaded file.
 
 ```php
 <?php
 
-use pht\FileThread;
+use pht\Thread;
 
-$fileThread = new FileThread('file.php', 1, 2, 3);
+$thread = new Thread();
 
-$fileThread->start();
-$fileThread->join();
+$thread->addFileTask('file.php', 1, 2, 3);
+
+$thread->start();
+$thread->join();
 ```
 
 `file.php`
@@ -266,7 +255,7 @@ $fileThread->join();
 var_dump($one, $two, $three);
 ```
 
-All `$globals` being passed into the `FileThread::__construct()` method will be serialised.
+All `$globals` being passed into the `Thread::addFileTask()` method will be serialised.
 
 ### Inter-Thread Communication Data Structures
 

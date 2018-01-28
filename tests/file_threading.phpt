@@ -3,19 +3,31 @@ Ensure file threading works correctly.
 --FILE--
 <?php
 
-use pht\{FileThread, Vector, HashTable, Queue};
+use pht\{Thread, Vector, HashTable, Queue};
 
 $vector = new Vector();
 $hashTable = new HashTable();
 $queue = new Queue();
 
-$ft = new FileThread('file_threading_helper.php', $vector, $hashTable, $queue);
+$thread = new Thread();
 
-$ft->start();
-$ft->join();
+for ($i = 0; $i < 2; ++$i) {
+    $thread->addFileTask('file_threading_helper.php', $i + 1, $i + 2, $i + 3);
+}
+
+$thread->addFileTask('file_threading_helper2.php', $vector, $hashTable, $queue);
+
+$thread->start();
+$thread->join();
 
 var_dump($vector, $hashTable, $queue);
 --EXPECT--
+int(1)
+int(2)
+int(3)
+int(2)
+int(3)
+int(4)
 object(pht\Vector)#1 (0) {
 }
 object(pht\HashTable)#2 (0) {

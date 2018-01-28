@@ -32,7 +32,6 @@
 #include "src/classes/queue.h"
 #include "src/classes/hashtable.h"
 #include "src/classes/vector.h"
-#include "src/classes/file_thread.h"
 #include "src/classes/atomic_integer.h"
 
 ZEND_DECLARE_MODULE_GLOBALS(pht)
@@ -47,7 +46,6 @@ PHP_MINIT_FUNCTION(pht)
     queue_ce_init();
     hashtable_ce_init();
     vector_ce_init();
-    file_thread_ce_init();
     atomic_integer_ce_init();
 
     sapi_module_deactivate = sapi_module.deactivate;

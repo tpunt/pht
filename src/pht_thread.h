@@ -65,24 +65,18 @@ typedef enum _status_t {
     JOINED
 } status_t;
 
-typedef enum _pht_thread_type_t {
-    CLASS_THREAD,
-    FILE_THREAD
-} pht_thread_type_t;
-
 typedef struct _thread_obj_t {
     pthread_t thread; // must be first member
     zend_ulong id; // local storage ID used to fetch local storage data
     pthread_mutex_t lock;
     status_t status;
-    pht_thread_type_t type;
     pht_queue_t tasks;
     void*** ls; // pointer to local storage in TSRM
     void*** parent_thread_ls;
     zend_object obj;
 } thread_obj_t;
 
-void thread_init(thread_obj_t *thread, pht_thread_type_t type);
+void thread_init(thread_obj_t *thread);
 void th_free_obj(zend_object *obj);
 void thread_join_destroy(zval *zthread);
 void *worker_function(thread_obj_t *thread);

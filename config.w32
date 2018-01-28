@@ -23,7 +23,7 @@ if (PHP_PHT != "no") {
         );
         ADD_SOURCES(
             configure_module_dirname + "/src/classes",
-            "thread.c threaded.c runnable.c queue.c hashtable.c vector.c file_thread.c atomic_integer.c",
+            "thread.c threaded.c runnable.c queue.c hashtable.c vector.c atomic_integer.c",
             PHT_EXT_NAME
         );
     } else {

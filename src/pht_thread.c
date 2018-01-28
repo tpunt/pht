@@ -83,10 +83,9 @@ void task_delete(void *task_void)
     free(task);
 }
 
-void thread_init(thread_obj_t *thread, pht_thread_type_t type)
+void thread_init(thread_obj_t *thread)
 {
     thread->status = NOT_STARTED;
-    thread->type = type;
     thread->parent_thread_ls = TSRMLS_CACHE;
 
     pht_queue_init(&thread->tasks, task_delete);
@@ -237,13 +236,28 @@ void handle_function_task(function_task_t *function_task)
     }
 }
 
-void handle_file_thread_task(thread_obj_t *thread)
+void handle_file_task(file_task_t *file_task)
 {
-    task_t *task = pht_queue_pop(&thread->tasks);
+    zval file_args, element, *file_args2 = zend_hash_str_find(&EG(symbol_table), "_THREAD", sizeof("_THREAD") - 1);
+
+    if (file_args2) {
+        zend_hash_clean(Z_ARR_P(file_args2));
+        ZVAL_ARR(&file_args, Z_ARR_P(file_args2));
+    } else {
+        array_init(&file_args);
+    }
+
+    for (int i = 0; i < file_task->argc; ++i) {
+        pht_convert_entry_to_zval(&element, file_task->args + i);
+        zend_hash_next_index_insert_new(Z_ARR(file_args), &element);
+    }
+
+    zend_hash_str_add(&EG(symbol_table), "_THREAD", sizeof("_THREAD") - 1, &file_args);
+
     zend_file_handle zfd;
 
     zfd.type = ZEND_HANDLE_FILENAME;
-    zfd.filename = PHT_STRV(task->t.file.name);
+    zfd.filename = PHT_STRV(file_task->name);
     zfd.free_filename = 0;
     zfd.opened_path = NULL;
 
@@ -262,10 +276,15 @@ void handle_thread_tasks(thread_obj_t *thread)
             continue;
         }
 
-        if (task->type == CLASS_TASK) {
-            handle_class_task(&task->t.class);
-        } else {
-            handle_function_task(&task->t.function);
+        switch (task->type) {
+            case CLASS_TASK:
+                handle_class_task(&task->t.class);
+                break;
+            case FUNCTION_TASK:
+                handle_function_task(&task->t.function);
+                break;
+            case FILE_TASK:
+                handle_file_task(&task->t.file);
         }
 
         task_delete(task);
@@ -287,21 +306,7 @@ void *worker_function(thread_obj_t *thread)
 
     php_request_startup();
 
-    if (thread->type != FILE_THREAD) {
-        copy_execution_context();
-    } else {
-        task_t *task = pht_queue_front(&thread->tasks);
-        zval thread_args, element;
-
-        array_init(&thread_args);
-
-        for (int i = 0; i < task->t.file.argc; ++i) {
-            pht_convert_entry_to_zval(&element, task->t.file.args + i);
-            zend_hash_next_index_insert_new(Z_ARR(thread_args), &element);
-        }
-
-        zend_hash_str_add(&EG(symbol_table), "_THREAD", sizeof("_THREAD") - 1, &thread_args);
-    }
+    copy_execution_context();
 
     pthread_mutex_lock(&thread->lock);
     if (thread->status == STARTING_UP) { // it could also be JOINED
@@ -309,13 +314,8 @@ void *worker_function(thread_obj_t *thread)
     }
     pthread_mutex_unlock(&thread->lock);
 
-    if (thread->type != FILE_THREAD) {
-        handle_thread_tasks(thread);
-
-        // @todo clean up all undone tasks
-    } else {
-        handle_file_thread_task(thread);
-    }
+    handle_thread_tasks(thread);
+    // @todo clean up all undone tasks
 
     PG(report_memleaks) = 0;
 
