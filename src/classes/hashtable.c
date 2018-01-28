@@ -242,21 +242,18 @@ HashTable *hto_get_properties(zval *zobj)
         return obj->properties;
     }
 
-    HashTable *zht = emalloc(sizeof(HashTable));
-
-    zend_hash_init(zht, 8, NULL, ZVAL_PTR_DTOR, 0);
-    pht_hashtable_to_zend_hashtable(zht, &hto->htoi->hashtable);
-
     if (obj->properties) {
-        // @todo safe? Perhaps just wipe HT and insert into it instead?
-        GC_REFCOUNT(obj->properties) = 0;
-        zend_array_destroy(obj->properties);
+        zend_hash_clean(obj->properties);
+    } else {
+        obj->properties = emalloc(sizeof(HashTable));
+        zend_hash_init(obj->properties, 8, NULL, ZVAL_PTR_DTOR, 0);
     }
 
-    obj->properties = zht;
+    pht_hashtable_to_zend_hashtable(obj->properties, &hto->htoi->hashtable);
+
     hto->vn = hto->htoi->vn;
 
-    return zht;
+    return obj->properties;
 }
 
 HashTable *hto_get_debug_info(zval *zobj, int *is_temp)

@@ -206,21 +206,18 @@ HashTable *vo_get_properties(zval *zobj)
         return obj->properties;
     }
 
-    HashTable *zht = emalloc(sizeof(HashTable));
-
-    zend_hash_init(zht, pht_vector_size(&vo->voi->vector), NULL, ZVAL_PTR_DTOR, 0);
-    pht_vector_to_zend_hashtable(zht, &vo->voi->vector);
-
     if (obj->properties) {
-        // @todo safe? Perhaps just wipe HT and insert into it instead?
-        GC_REFCOUNT(obj->properties) = 0;
-        zend_array_destroy(obj->properties);
+        zend_hash_clean(obj->properties);
+    } else {
+        obj->properties = emalloc(sizeof(HashTable));
+        zend_hash_init(obj->properties, pht_vector_size(&vo->voi->vector), NULL, ZVAL_PTR_DTOR, 0);
     }
 
-    obj->properties = zht;
+    pht_vector_to_zend_hashtable(obj->properties, &vo->voi->vector);
+
     vo->vn = vo->voi->vn;
 
-    return zht;
+    return obj->properties;
 }
 
 ZEND_BEGIN_ARG_INFO_EX(Vector___construct_arginfo, 0, 0, 0)

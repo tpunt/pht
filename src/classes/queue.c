@@ -87,21 +87,18 @@ HashTable *qo_get_properties(zval *zobj)
         return obj->properties;
     }
 
-    HashTable *zht = emalloc(sizeof(HashTable));
-
-    zend_hash_init(zht, pht_queue_size(&qo->qoi->queue), NULL, ZVAL_PTR_DTOR, 0);
-    pht_queue_to_zend_hashtable(zht, &qo->qoi->queue);
-
     if (obj->properties) {
-        // @todo safe? Perhaps just wipe HT and insert into it instead?
-        GC_REFCOUNT(obj->properties) = 0;
-        zend_array_destroy(obj->properties);
+        zend_hash_clean(obj->properties);
+    } else {
+        obj->properties = emalloc(sizeof(HashTable));
+        zend_hash_init(obj->properties, pht_queue_size(&qo->qoi->queue), NULL, ZVAL_PTR_DTOR, 0);
     }
 
-    obj->properties = zht;
+    pht_queue_to_zend_hashtable(obj->properties, &qo->qoi->queue);
+
     qo->vn = qo->qoi->vn;
 
-    return zht;
+    return obj->properties;
 }
 
 ZEND_BEGIN_ARG_INFO_EX(Queue_push_arginfo, 0, 0, 1)
