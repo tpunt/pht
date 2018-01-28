@@ -39,7 +39,7 @@ class Test implements Runnable
 
 $thread = new Thread();
 
-$thread->addTask(Test::class);
+$thread->addClassTask(Test::class);
 $thread->start();
 $thread->join();
 --EXPECTF--

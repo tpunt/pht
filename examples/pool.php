@@ -34,11 +34,11 @@ class Pool
         }
     }
 
-    public function addTask(string $className, ...$ctorArgs) : void
+    public function addClassTask(string $className, ...$ctorArgs) : void
     {
         static $i = 0;
 
-        $this->threads[$i]->addTask($className, ...$ctorArgs);
+        $this->threads[$i]->addClassTask($className, ...$ctorArgs);
 
         $i = ($i + 1) % $this->poolSize;
     }
@@ -56,7 +56,7 @@ $pool = new Pool(5, $q);
 $taskCount = 10;
 
 for ($i = 0; $i < $taskCount; ++$i) {
-    $pool->addTask(Task::class, $q);
+    $pool->addClassTask(Task::class, $q);
 }
 
 for ($i = 0; $i < $taskCount; ) {

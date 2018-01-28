@@ -23,8 +23,8 @@ $q = new Queue();
 $thread = new Thread();
 $tasksRemaining = 2;
 
-$thread->addTask(Task::class, $q);
-$thread->addTask(Task::class, $q);
+$thread->addClassTask(Task::class, $q);
+$thread->addClassTask(Task::class, $q);
 
 $thread->start();
 

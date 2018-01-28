@@ -46,11 +46,11 @@ static zend_object *thread_ctor(zend_class_entry *entry)
     return &thread->obj;
 }
 
-ZEND_BEGIN_ARG_INFO_EX(Thread_add_task_arginfo, 0, 0, 1)
+ZEND_BEGIN_ARG_INFO_EX(Thread_add_class_task_arginfo, 0, 0, 1)
     ZEND_ARG_INFO(0, class_name)
 ZEND_END_ARG_INFO()
 
-PHP_METHOD(Thread, addTask)
+PHP_METHOD(Thread, addClassTask)
 {
     zend_class_entry *ce = Runnable_ce;
     zval *args;
@@ -77,7 +77,7 @@ PHP_METHOD(Thread, addTask)
 
         for (int i = 0; i < argc; ++i) {
             if (!pht_convert_zval_to_entry(task->t.class.ctor_args + i, args + i)) {
-                zend_throw_error(NULL, "Failed to serialise argument %d of Thread::addTask()", i + 1);
+                zend_throw_error(NULL, "Failed to serialise argument %d of Thread::addClassTask()", i + 1);
 
                 for (int i2 = 0; i2 < i; ++i2) {
                     pht_entry_delete_value(task->t.class.ctor_args + i2);
@@ -153,7 +153,7 @@ PHP_METHOD(Thread, addFunctionTask)
 
         for (int i = 0; i < argc; ++i) {
             if (!pht_convert_zval_to_entry(task->t.function.args + i, args + i)) {
-                zend_throw_error(NULL, "Failed to serialise argument %d of Thread::addTask()", i + 1);
+                zend_throw_error(NULL, "Failed to serialise argument %d of Thread::addClassTask()", i + 1);
 
                 for (int i2 = 0; i2 < i; ++i2) {
                     pht_entry_delete_value(task->t.function.args + i2);
@@ -220,7 +220,7 @@ PHP_METHOD(Thread, addFileTask)
 
         for (int i = 0; i < argc; ++i) {
             if (!pht_convert_zval_to_entry(task->t.file.args + i, args + i)) {
-                zend_throw_error(NULL, "Failed to serialise argument %d of Thread::addTask()", i + 1);
+                zend_throw_error(NULL, "Failed to serialise argument %d of Thread::addClassTask()", i + 1);
 
                 for (int i2 = 0; i2 < i; ++i2) {
                     pht_entry_delete_value(task->t.file.args + i2);
@@ -285,7 +285,7 @@ PHP_METHOD(Thread, taskCount)
 }
 
 zend_function_entry Thread_methods[] = {
-    PHP_ME(Thread, addTask, Thread_add_task_arginfo, ZEND_ACC_PUBLIC)
+    PHP_ME(Thread, addClassTask, Thread_add_class_task_arginfo, ZEND_ACC_PUBLIC)
     PHP_ME(Thread, addFunctionTask, Thread_add_function_task_arginfo, ZEND_ACC_PUBLIC)
     PHP_ME(Thread, addFileTask, Thread_add_file_task_arginfo, ZEND_ACC_PUBLIC)
     PHP_ME(Thread, start, Thread_start_arginfo, ZEND_ACC_PUBLIC)

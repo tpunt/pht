@@ -44,8 +44,8 @@ class Task implements Runnable
 
 $thread = new Thread();
 
-// Thread::addTask(string $className, mixed ...$constructorArgs) : void;
-$thread->addTask(Task::class);
+// Thread::addClassTask(string $className, mixed ...$constructorArgs) : void;
+$thread->addClassTask(Task::class);
 
 // Thread::addFunctionTask(callable $fn, mixed ...$fnArgs) : void;
 $thread->addFunctionTask(function ($zero) {var_dump($zero);}, 0);
@@ -78,7 +78,7 @@ So far, the following data structures have been implemented: queue, hash table, 
 With this approach to threading, only the given built-in data structures need to be safely passed around between threads.
 
 This means that the serialisation points to be aware of are:
- - The arguments being passed to `Thread::addTask()` `Thread::addFunctionTask()`, and `Thread::addFileTask()`
+ - The arguments being passed to `Thread::addClassTask()` `Thread::addFunctionTask()`, and `Thread::addFileTask()`
  - The values being placed into the ITC-based data structures
 
 ## API
@@ -90,7 +90,7 @@ namespace pht;
 
 class Thread
 {
-    public function addTask(string $className, mixed ...$ctorArgs) : void;
+    public function addClassTask(string $className, mixed ...$ctorArgs) : void;
     public function addFunctionTask(callable $fn, mixed ...$fnArgs) : void;
     public function addFileTask(string $filename, mixed ...$globals) : void;
     public function taskCount(void) : int;
@@ -189,13 +189,13 @@ class Task implements Runnable
 
 $thread = new Thread();
 
-$thread->addTask(Task::class, 1);
+$thread->addClassTask(Task::class, 1);
 
 $thread->start();
 $thread->join();
 ```
 
-All `$ctorArgs` being passed into the `Thread::addTask()` method will be serialised.
+All `$ctorArgs` being passed into the `Thread::addClassTask()` method will be serialised.
 
 #### Function Threading
 

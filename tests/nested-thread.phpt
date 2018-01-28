@@ -19,7 +19,7 @@ class Test implements Runnable
     {
         $thread = new Thread();
 
-        $thread->addTask(Test2::class);
+        $thread->addClassTask(Test2::class);
         $thread->start();
         $thread->join();
     }
@@ -27,7 +27,7 @@ class Test implements Runnable
 
 $thread = new Thread();
 
-$thread->addTask(Test::class);
+$thread->addClassTask(Test::class);
 $thread->start();
 $thread->join();
 --EXPECT--

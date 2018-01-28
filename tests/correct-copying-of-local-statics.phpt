@@ -20,7 +20,7 @@ class T implements Runnable
 }
 
 $t = new Thread();
-$t->addTask(T::class);
+$t->addClassTask(T::class);
 
 $t->start();
 

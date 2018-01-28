@@ -29,7 +29,7 @@ $thread = new Thread();
 $expectedEntryCount = 2;
 
 $thread->start();
-$thread->addTask(Test::class, $q);
+$thread->addClassTask(Test::class, $q);
 
 for ($i = 0; $i < $expectedEntryCount; ) {
     $q->lock();

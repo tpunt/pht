@@ -28,7 +28,7 @@ $v = new Vector();
 $thread = new Thread();
 $expectedEntryCount = 2;
 
-$thread->addTask(Test::class, $v);
+$thread->addClassTask(Test::class, $v);
 $thread->start();
 
 while (true) {

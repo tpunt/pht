@@ -31,7 +31,7 @@ class Test implements Runnable
 $thread = new Thread();
 $ht = new HashTable();
 
-$thread->addTask(Test::class, $ht, 'abc');
+$thread->addClassTask(Test::class, $ht, 'abc');
 $thread->start();
 
 while (true) {

@@ -14,7 +14,7 @@ class Test implements Runnable
 $thread = new Thread();
 
 try {
-    $thread->addTask(Test::class, fopen(__FILE__, 'r'));
+    $thread->addClassTask(Test::class, fopen(__FILE__, 'r'));
 } catch (Error $e) {
     var_dump($e->getMessage());
 }
@@ -36,7 +36,7 @@ try {
 serialize($thread); // deliberate non-catch
 
 --EXPECTF--
-string(51) "Failed to serialise argument 1 of Thread::addTask()"
+string(56) "Failed to serialise argument 1 of Thread::addClassTask()"
 string(29) "Failed to serialise the value"
 string(44) "Serialization of 'pht\Thread' is not allowed"
 
