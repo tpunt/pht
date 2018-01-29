@@ -25,7 +25,11 @@ class Pool
 
     public function __construct(int $poolSize, Queue $q = NULL)
     {
-        $this->poolSize = $poolSize; // must be > 0
+        if ($poolSize < 1) {
+            throw new Exception("Invalid pool size given");
+        }
+
+        $this->poolSize = $poolSize;
         $this->q = $q;
 
         for ($i = 0; $i < $this->poolSize; ++$i) {
