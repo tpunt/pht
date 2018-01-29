@@ -91,7 +91,9 @@ PHP_METHOD(Thread, addClassTask)
         task->t.class.ctor_args = NULL;
     }
 
+    pthread_mutex_lock(&thread->lock);
     pht_queue_push(&thread->tasks, task);
+    pthread_mutex_unlock(&thread->lock);
 }
 
 ZEND_BEGIN_ARG_INFO_EX(Thread_add_function_task_arginfo, 0, 0, 1)
@@ -167,7 +169,9 @@ PHP_METHOD(Thread, addFunctionTask)
         task->t.function.args = NULL;
     }
 
+    pthread_mutex_lock(&thread->lock);
     pht_queue_push(&thread->tasks, task);
+    pthread_mutex_unlock(&thread->lock);
 }
 
 ZEND_BEGIN_ARG_INFO_EX(Thread_add_file_task_arginfo, 0, 0, 1)
@@ -235,7 +239,9 @@ PHP_METHOD(Thread, addFileTask)
         task->t.file.args = NULL;
     }
 
+    pthread_mutex_lock(&thread->lock);
     pht_queue_push(&thread->tasks, task);
+    pthread_mutex_unlock(&thread->lock);
 }
 
 ZEND_BEGIN_ARG_INFO_EX(Thread_start_arginfo, 0, 0, 0)

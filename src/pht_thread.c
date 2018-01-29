@@ -270,7 +270,9 @@ void handle_thread_tasks(thread_obj_t *thread)
 {
     // @todo mutex lock?
     while (thread->status != JOINED || thread->tasks.size) {
+        pthread_mutex_lock(&thread->lock);
         task_t *task = pht_queue_pop(&thread->tasks);
+        pthread_mutex_unlock(&thread->lock);
 
         if (!task) {
             continue;
