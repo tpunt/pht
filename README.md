@@ -27,6 +27,8 @@ Contents:
    - [Atomic Values](https://github.com/tpunt/pht#atomic-values)
      - [Atomic Integer](https://github.com/tpunt/pht#atomic-integer)
 
+This extension was built using a few ideas from the [pthreads](https://github.com/krakjoe/pthreads) extension. I'd therefore like to give credit to, as well as thank, [Joe Watkins](https://github.com/krakjoe) for his great work on the pthreads project!
+
 ## The Basics
 
 This approach to threading abstracts away the thread itself behind a dedicated object (`Thread`), where tasks are added to that thread's internal task queue.
