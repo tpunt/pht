@@ -25,7 +25,6 @@
 #include <ext/standard/info.h>
 
 #include "php_pht.h"
-#include "src/pht_thread.h"
 #include "src/classes/thread.h"
 #include "src/classes/threaded.h"
 #include "src/classes/runnable.h"
