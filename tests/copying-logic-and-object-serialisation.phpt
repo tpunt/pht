@@ -25,9 +25,4 @@ $thread->addFunctionTask(function () use ($a) {var_dump($a);});
 $thread->start();
 $thread->join();
 --EXPECT--
-Warning: Unknown: Objects cannot be serialised in Unknown on line 0
-
-Warning: Unknown: Objects cannot be serialised in Unknown on line 0
-
-Warning: Unknown: Objects cannot be serialised in Unknown on line 0
 NULL
