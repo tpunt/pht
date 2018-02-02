@@ -13,6 +13,7 @@ Requirements:
 Any Unix-based OS is supported (including OS X), along with Windows. This extension was explicitly tested on OS X (Yosemite), Ubuntu 14.04 (32bit), and Windows Server 2012 (the pthreads-win32 library is needed).
 
 Contents:
+ - [Pthreads VS pht](https://github.com/tpunt/pht#pthreads-vs-pht)
  - [The Basics](https://github.com/tpunt/pht#the-basics)
  - [API](https://github.com/tpunt/pht#api)
  - [Quick Examples](https://github.com/tpunt/pht#quick-examples)
@@ -28,6 +29,23 @@ Contents:
      - [Atomic Integer](https://github.com/tpunt/pht#atomic-integer)
 
 This extension was built using a few ideas from the [pthreads](https://github.com/krakjoe/pthreads) extension. I'd therefore like to give credit to, as well as thank, [Joe Watkins](https://github.com/krakjoe) for his great work on the pthreads project!
+
+## Pthreads vs pht
+
+Both extensions have their own advantages and disadvantages.
+
+Pthreads advantages over pht:
+ - Uses synchronised blocks over mutex locks (which can be cleaner to use and harder to mess up)
+ - Easier communication between threads (no knowledge of data structures is required, which PHP developers tend to lack in)
+ - Maturer
+
+Pht advantages over pthreads:
+ - No serialisation of properties on threaded objects. This means:
+   - No performance hit when reading from or writing to properties
+   - No unfamiliar semantics, such as implicitly casting arrays to `Volatile` objects or property immutability for some types
+   - No limitations on what types of data can be stored as properties on threaded objects
+ - The ability to thread functions and files (as well as classes)
+ - Threaded classes implement a Runnable interface, rather than having to inherit (so more flexibility on inheritance)
 
 ## The Basics
 
@@ -80,7 +98,7 @@ So far, the following data structures have been implemented: queue, hash table, 
 With this approach to threading, only the given built-in data structures need to be safely passed around between threads.
 
 This means that the serialisation points to be aware of are:
- - The arguments being passed to `Thread::addClassTask()` `Thread::addFunctionTask()`, and `Thread::addFileTask()`
+ - The arguments being passed to `Thread::addClassTask()`, `Thread::addFunctionTask()`, and `Thread::addFileTask()`
  - The values being placed into the ITC-based data structures
 
 ## API
@@ -112,7 +130,7 @@ interface Threaded
     public function unlock(void) : void;
 }
 
-class Queue implements Threaded
+final class Queue implements Threaded
 {
     public function push(mixed $value) : void;
     public function pop(void) : mixed;
@@ -122,7 +140,7 @@ class Queue implements Threaded
     public function size(void) : int;
 }
 
-class HashTable implements Threaded
+final class HashTable implements Threaded
 {
     public function lock(void) : void;
     public function unlock(void) : void;
@@ -130,7 +148,7 @@ class HashTable implements Threaded
     // ArrayAccess API is enabled, but the userland interface is not explicitly implemented
 }
 
-class Vector implements Threaded
+final class Vector implements Threaded
 {
     public function __construct([int $size = 0 [, mixed $defaultValue = 0]]);
     public function resize(int $size [, mixed $defaultValue = 0]) : void;
@@ -147,7 +165,7 @@ class Vector implements Threaded
     // ArrayAccess API is enabled, but the userland interface is not explicitly implemented
 }
 
-class AtomicInteger implements Threaded
+final class AtomicInteger implements Threaded
 {
     public function __construct([int $value = 0]);
     public function get(void) : int;
