@@ -169,7 +169,7 @@ static zend_always_inline uint32_t pht_zend_array_dup_elements(HashTable *source
 	return idx;
 }
 
-ZEND_API HashTable* ZEND_FASTCALL pht_zend_array_dup(HashTable *source)
+HashTable* ZEND_FASTCALL pht_zend_array_dup(HashTable *source)
 {
 	uint32_t idx;
 	HashTable *target;
@@ -280,7 +280,7 @@ static inline size_t zend_ast_list_size(uint32_t children) {
 	return sizeof(zend_ast_list) - sizeof(zend_ast *) + sizeof(zend_ast *) * children;
 }
 
-ZEND_API zend_ast *pht_zend_ast_copy(zend_ast *ast)
+zend_ast *pht_zend_ast_copy(zend_ast *ast)
 {
 	if (ast == NULL) {
 		return NULL;
@@ -318,7 +318,7 @@ The following is taken from Zend/zend_variables.c and changes the way arrays and
 constant AST types are copied. This internal function is used for PHT_ZVAL_DUP
 (defined in pht_zend.h), which is a thread-safe version of ZVAL_DUP.
 */
-ZEND_API void ZEND_FASTCALL _pht_zval_copy_ctor_func(zval *zvalue ZEND_FILE_LINE_DC)
+void ZEND_FASTCALL _pht_zval_copy_ctor_func(zval *zvalue ZEND_FILE_LINE_DC)
 {
 	if (EXPECTED(Z_TYPE_P(zvalue) == IS_ARRAY)) {
 		ZVAL_ARR(zvalue, pht_zend_array_dup(Z_ARRVAL_P(zvalue))); // changed line
