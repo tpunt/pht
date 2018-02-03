@@ -84,7 +84,7 @@ int pht_queue_size(pht_queue_t *queue)
 void pht_queue_destroy(pht_queue_t *queue)
 {
     while (queue->size) {
-        pht_entry_delete(pht_queue_pop(queue));
+        queue->dtor(pht_queue_pop(queue));
     }
 }
 

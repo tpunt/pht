@@ -53,6 +53,7 @@ static zend_object *queue_ctor(zend_class_entry *entry)
         qoi->refcount = 1;
         qoi->vn = 0;
         pthread_mutex_init(&qoi->lock, NULL);
+        pht_queue_init(&qoi->queue, pht_entry_delete);
 
         qo->qoi = qoi;
     }
