@@ -25,7 +25,7 @@
 extern zend_module_entry pht_module_entry;
 #define phpext_pht_ptr &pht_module_entry
 
-#define PHP_PHT_VERSION "0.1.0"
+#define PHP_PHT_VERSION "0.0.1"
 
 #ifdef PHP_WIN32
 #  define PHP_PHT_API __declspec(dllexport)
