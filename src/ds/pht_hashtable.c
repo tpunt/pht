@@ -169,16 +169,13 @@ void *pht_hashtable_search_direct(pht_hashtable_t *ht, pht_string_t *key, long h
     for (int i = 0; i < ht->size; ++i) {
         pht_bucket_t *b = ht->values + index;
 
-        if (!b->value) {
-            if (!b->hash) { // b->hash = 0 for an empty space, 1 for a tombstone
-                return NULL;
+        if (b->value) {
+            if (b->hash == hash && !(!!b->key ^ !!key) && (!key || pht_str_eq(b->key, key))) {
+                return b->value;
             }
-            continue; // @todo if backtracking was implemented then this could be returned from instead
-        }
-
-        if (b->hash == hash && !(!!b->key ^ !!key) && (!key || pht_str_eq(b->key, key))) {
-            return b->value;
-        }
+        } else if (!b->hash) { // b->hash = 0 for an empty space, 1 for a tombstone
+            return NULL;
+        } // @todo if backtracking was implemented then this could be returned from instead
 
         // @todo if the variance is less than the previous bucket, then also break early?
 
@@ -202,16 +199,13 @@ static pht_string_t *pht_hashtable_key_fetch_direct(pht_hashtable_t *ht, pht_str
     for (int i = 0; i < ht->size; ++i) {
         pht_bucket_t *b = ht->values + index;
 
-        if (!b->value) {
-            if (!b->hash) { // b->hash = 0 for an empty space, 1 for a tombstone
-                return NULL;
+        if (b->value) {
+            if (b->hash == hash && !(!!b->key ^ !!key) && (!key || pht_str_eq(b->key, key))) {
+                return b->key;
             }
-            continue; // @todo if backtracking was implemented then this could be returned from instead
-        }
-
-        if (b->hash == hash && !(!!b->key ^ !!key) && (!key || pht_str_eq(b->key, key))) {
-            return b->key;
-        }
+        } else if (!b->hash) { // b->hash = 0 for an empty space, 1 for a tombstone
+            return NULL;
+        } // @todo if backtracking was implemented then this could be returned from instead
 
         // @todo if the variance is less than the previous bucket, then also break early?
 
@@ -269,31 +263,28 @@ void pht_hashtable_delete_direct(pht_hashtable_t *ht, pht_string_t *key, long ha
     for (int i = 0; i < ht->size; ++i) {
         pht_bucket_t *b = ht->values + index;
 
-        if (!b->value) {
-            if (!b->hash) { // b->hash = 0 for an empty space, 1 for a tombstone
-                return;
+        if (b->value) {
+            if (b->hash == hash && !(!!b->key ^ !!key) && (!key || pht_str_eq(b->key, key))) {
+                ht->dtor(b->value);
+
+                if (b->key) {
+                    free(PHT_STRV_P(b->key));
+                    free(b->key);
+                }
+
+                b->key = NULL;
+                b->hash = 1; // tombstone
+                b->value = NULL;
+                b->variance = 0;
+                --ht->used;
+
+                // @todo implement backtracking?
+
+                break;
             }
-            continue; // @todo if backtracking was implemented then this could be returned from instead
-        }
-
-        if (b->hash == hash && !(!!b->key ^ !!key) && (!key || pht_str_eq(b->key, key))) {
-            ht->dtor(b->value);
-
-            if (b->key) {
-                free(PHT_STRV_P(b->key));
-                free(b->key);
-            }
-
-            b->key = NULL;
-            b->hash = 1; // tombstone
-            b->value = NULL;
-            b->variance = 0;
-            --ht->used;
-
-            // @todo implement backtracking?
-
-            break;
-        }
+        } else if (!b->hash) { // b->hash = 0 for an empty space, 1 for a tombstone
+            return;
+        } // @todo if backtracking was implemented then this could be returned from instead
 
         // @todo if the variance is less than the previous bucket, then also break early?
 
