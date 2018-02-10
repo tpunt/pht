@@ -1,6 +1,6 @@
 # The Pht Threading Extension
 
-This extension exposes a new approach to threading in PHP. Everything and anything is still subject to change.
+This extension exposes a new approach to threading in PHP.
 
 Quick feature list:
  - Classes, functions, and files may be threaded
@@ -13,6 +13,7 @@ Requirements:
 Any Unix-based OS is supported (including OS X), along with Windows. This extension was explicitly tested on OS X (Yosemite), Ubuntu 14.04 (32bit), and Windows Server 2012 (the pthreads-win32 library is needed).
 
 Contents:
+ - [Installation](https://github.com/tpunt/pht#installation)
  - [Pthreads VS pht](https://github.com/tpunt/pht#pthreads-vs-pht)
  - [The Basics](https://github.com/tpunt/pht#the-basics)
  - [API](https://github.com/tpunt/pht#api)
@@ -29,6 +30,26 @@ Contents:
      - [Atomic Integer](https://github.com/tpunt/pht#atomic-integer)
 
 This extension was built using a few ideas from the [pthreads](https://github.com/krakjoe/pthreads) extension. I'd therefore like to give credit to, as well as thank, [Joe Watkins](https://github.com/krakjoe) for his great work on the pthreads project!
+
+## Installation
+
+If you're using a Unix-based OS, then you can build the extension from source by:
+```php
+git clone https://github.com/tpunt/pht
+cd pht
+git checkout tags/v0.0.1
+phpize
+./configure
+make
+make install
+```
+
+If you're using Windows, see the [release page](https://github.com/tpunt/pht/releases/tag/v0.0.1) for the appropriate .dll file.
+
+Once the extension has been installed, with the .so or .dll file in the appropriate place, then the php.ini file will need to be updated:
+```
+extension="path/to/pht_file"
+```
 
 ## Pthreads vs pht
 
