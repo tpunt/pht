@@ -66,6 +66,7 @@ pht_entry_t *pht_vector_shift(pht_vector_t *vector)
         vector->values[i - 1] = vector->values[i];
     }
 
+    --vector->used;
     // @todo resize if used = 1/4 of size?
 
     return value;
