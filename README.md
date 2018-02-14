@@ -12,6 +12,8 @@ Requirements:
 
 Any Unix-based OS is supported (including OS X), along with Windows. This extension was explicitly tested on OS X (Yosemite), Ubuntu 14.04 (32bit), and Windows Server 2012 (the pthreads-win32 library is needed).
 
+Documentation: [php.net/pht](http://php.net/pht)
+
 Contents:
  - [Installation](https://github.com/tpunt/pht#installation)
  - [Pthreads VS pht](https://github.com/tpunt/pht#pthreads-vs-pht)
@@ -44,9 +46,9 @@ make
 make install
 ```
 
-If you're using Windows, see the [release page](https://github.com/tpunt/pht/releases/tag/v0.0.1) for the appropriate .dll file.
+If you're using Windows, see the [release page](https://github.com/tpunt/pht/releases) for the appropriate .dll extension file. The pthreadVC2.dll file (distributed alongside the extension's .dll file) will need to be made available in your `PATH` environment variable.
 
-Once the extension has been installed, with the .so or .dll file in the appropriate place, then the php.ini file will need to be updated:
+Once the .so or .dll file has been acquire, the php.ini file will then need to be updated (to load the extension) with:
 ```
 extension="path/to/pht_file"
 ```
@@ -61,12 +63,12 @@ Pthreads advantages over pht:
  - Maturer
 
 Pht advantages over pthreads:
- - No serialisation of properties on threaded objects. This means:
+ - No serialisation of properties on threaded objects, meaning:
    - No performance hit when reading from or writing to properties
    - No unfamiliar semantics, such as implicitly casting arrays to `Volatile` objects or property immutability for some types
    - No limitations on what types of data can be stored as properties on threaded objects
  - The ability to thread functions and files (as well as classes)
- - Threaded classes implement a Runnable interface, rather than having to inherit (so more flexibility on inheritance)
+ - Threaded classes implement a `Runnable` interface, rather than having to inherit (so more flexibility on inheritance)
 
 ## The Basics
 
@@ -200,7 +202,7 @@ final class AtomicInteger implements Threaded
 
 ## Quick Examples
 
-This section demonstrates some quick examples of the basic features. For generic examples, see the [examples](https://github.com/tpunt/pht/tree/master/examples) folder instead.
+This section demonstrates some quick examples of the basic features. For generic examples, see the [examples](https://github.com/tpunt/pht/tree/master/examples) folder instead. And for further information on the classes and their methods, checkout the [documentation](http://php.net/pht).
 
 ### Threading Types
 
