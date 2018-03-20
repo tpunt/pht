@@ -10,7 +10,7 @@ Quick feature list:
 Requirements:
  - A ZTS version of PHP 7.2. The master branch of php-src is not currently compatible
 
-Any Unix-based OS is supported (including OS X), along with Windows. This extension was explicitly tested on OS X (Yosemite), Ubuntu 14.04 (32bit), and Windows Server 2012 (the pthreads-win32 library is needed).
+Any Unix-based OS is supported (including OS X), along with Windows. This extension was explicitly tested on OS X (Yosemite and Sierra), Ubuntu 14.04 (32bit), and Windows Server 2012 (the pthreads-win32 library is needed).
 
 Documentation: [php.net/pht](http://php.net/pht)
 
@@ -110,13 +110,13 @@ $thread->join();
 The task types have the following properties:
  - Class tasks will be instantiated inside of the new thread
  - Function tasks will be serialised and passed into the new thread
- - File tasks will open the new file inside of the new thread
+ - File tasks will open the file inside of the new thread
 
-All of these tasks will execute in isolation. In particular for class tasks, it means the spawned objects cannot be passed around between threads. By keeping the threading contexts completely separate from one-another, we prevent the need to serialise the properties of threaded objects (a necessary evil if such objects had to operate in multiple threads, as seen in pthreads).
+All of these tasks will execute in isolation. In particular, for class tasks, it means the spawned objects cannot be passed around between threads. By keeping the threading contexts completely separate from one-another, we prevent the need to serialise the properties of threaded objects (a necessary evil if such objects had to operate in multiple threads, as seen in pthreads).
 
-Given the isolation of threaded contexts, we have a new problem: how can data be passed between threads? To solve this problem, threadable data structures have been implemented, where mutex locks have been exposed to the programmer for greater control over them. Whilst this has increased the complexity a bit for the programmer, it has also increased the flexibility, too.
+Given the isolation of threaded contexts, we have a new problem: how can data be passed between threads for inter-thread communication (ITC)? To solve this problem, threadable data structures have been implemented, where mutex locks have been exposed to the programmer for controlling access to them. Whilst this has increased the complexity a bit for the programmer, it has also increased the flexibility, too.
 
-So far, the following data structures have been implemented: queue, hash table, vector. These data structures can be safely passed around between threads, and manipulated by multiple threads using the mutex locks that have been packed in with the data structure. They are reference-counted across threads, and so they do not need to be explicitly destroyed.
+So far, the following data structures have been implemented: queue, hash table, and vector. These data structures can be safely passed around between threads, and manipulated by multiple threads using the mutex locks that have been packed in with the data structure. They are reference-counted across threads, and so they do not need to be explicitly destroyed.
 
 With this approach to threading, only the given built-in data structures need to be safely passed around between threads.
 
@@ -208,7 +208,7 @@ This section demonstrates some quick examples of the basic features. For generic
 
 #### Class Threading
 
-Classes that will be threaded need to implement the `Runnable` interface.
+Classes that will be threaded need to implement the `Runnable` interface. The implemented `Runnable::run` method acts as the entry point of execution for when the class task is executed.
 
 ```php
 <?php
