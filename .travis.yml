@@ -1,0 +1,20 @@
+language: php
+
+os:
+  - linux
+
+compiler:
+  - gcc
+  - clang
+
+php:
+  - 7.2
+
+before_script:
+  - phpenv config-rm xdebug.ini
+
+script:
+  - phpize
+  - ./configure
+  - make
+  - REPORT_EXIT_STATUS=1 TEST_PHP_ARGS="-q --show-diff" make test
