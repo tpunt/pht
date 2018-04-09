@@ -21,7 +21,7 @@
 
 #include <Zend/zend_types.h>
 
-#include "src/pht_general.h"
+#include "src/pht_string.h"
 
 typedef struct _pht_bucket_t {
     pht_string_t *key; // @todo remove pointer to key?

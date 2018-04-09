@@ -21,7 +21,7 @@
 
 #include "Zend/zend.h"
 
-#include "src/pht_general.h"
+#include "src/pht_string.h"
 #include "src/classes/queue.h"
 #include "src/classes/hashtable.h"
 #include "src/classes/vector.h"

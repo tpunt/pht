@@ -19,7 +19,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "src/pht_general.h"
+#include "src/pht_string.h"
 
 void pht_str_set_len(pht_string_t *pstr, int len)
 {

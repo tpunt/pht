@@ -16,8 +16,8 @@
   +----------------------------------------------------------------------+
 */
 
-#ifndef PHT_GENERAL_H
-#define PHT_GENERAL_H
+#ifndef PHT_STRING_H
+#define PHT_STRING_H
 
 #define PHT_STRL(s) (s).len
 #define PHT_STRV(s) (s).val

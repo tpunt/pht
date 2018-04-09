@@ -13,7 +13,7 @@ if (PHP_PHT != "no") {
         EXTENSION(PHT_EXT_NAME, "pht.c", PHP_PHT_SHARED, PHT_EXT_FLAGS);
         ADD_SOURCES(
             configure_module_dirname + "/src",
-            "pht_copy.c pht_zend.c pht_entry.c pht_general.c",
+            "pht_copy.c pht_zend.c pht_entry.c pht_string.c",
             PHT_EXT_NAME
         );
         ADD_SOURCES(

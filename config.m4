@@ -6,7 +6,7 @@ if test "$PHP_PHT" != "no"; then
         src/pht_copy.c \
         src/pht_zend.c \
         src/pht_entry.c \
-        src/pht_general.c \
+        src/pht_string.c \
         src/ds/pht_queue.c \
         src/ds/pht_hashtable.c \
         src/ds/pht_vector.c \
