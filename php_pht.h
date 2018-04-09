@@ -43,6 +43,19 @@ ZEND_END_MODULE_GLOBALS(pht)
 
 ZEND_EXTERN_MODULE_GLOBALS(pht)
 
+typedef struct _common_strings_t {
+    zend_string *__construct;
+    zend_string *run;
+    zend_string *_THREAD;
+    zend_string *value;
+    zend_string *Queue;
+    zend_string *HashTable;
+    zend_string *Vector;
+    zend_string *AtomicInteger;
+} common_strings_t;
+
+extern common_strings_t common_strings;
+
 #define PHT_ZG(v) ZEND_MODULE_GLOBALS_ACCESSOR(pht, v)
 
 #define PHT_CTX(ls, id, type, element) (((type) (*((void ***) ls))[TSRM_UNSHUFFLE_RSRC_ID(id)])->element)

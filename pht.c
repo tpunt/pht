@@ -36,6 +36,7 @@
 ZEND_DECLARE_MODULE_GLOBALS(pht)
 
 static int (*sapi_module_deactivate)(void);
+common_strings_t common_strings;
 
 PHP_MINIT_FUNCTION(pht)
 {
@@ -47,6 +48,31 @@ PHP_MINIT_FUNCTION(pht)
     vector_ce_init();
     atomic_integer_ce_init();
 
+    common_strings.__construct = zend_string_init(ZEND_STRL("__construct"), 1);
+    zend_string_hash_val(common_strings.__construct);
+    GC_FLAGS(common_strings.__construct) |= IS_STR_INTERNED;
+    common_strings.run = zend_string_init(ZEND_STRL("run"), 1);
+    zend_string_hash_val(common_strings.run);
+    GC_FLAGS(common_strings.run) |= IS_STR_INTERNED;
+    common_strings._THREAD = zend_string_init(ZEND_STRL("_THREAD"), 1);
+    zend_string_hash_val(common_strings._THREAD);
+    GC_FLAGS(common_strings._THREAD) |= IS_STR_INTERNED;
+    common_strings.value = zend_string_init(ZEND_STRL("value"), 1);
+    zend_string_hash_val(common_strings.value);
+    GC_FLAGS(common_strings.value) |= IS_STR_INTERNED;
+    common_strings.Queue = zend_string_init(ZEND_STRL("pht\\Queue"), 1);
+    zend_string_hash_val(common_strings.Queue);
+    GC_FLAGS(common_strings.Queue) |= IS_STR_INTERNED;
+    common_strings.HashTable = zend_string_init(ZEND_STRL("pht\\HashTable"), 1);
+    zend_string_hash_val(common_strings.HashTable);
+    GC_FLAGS(common_strings.HashTable) |= IS_STR_INTERNED;
+    common_strings.Vector = zend_string_init(ZEND_STRL("pht\\Vector"), 1);
+    zend_string_hash_val(common_strings.Vector);
+    GC_FLAGS(common_strings.Vector) |= IS_STR_INTERNED;
+    common_strings.AtomicInteger = zend_string_init(ZEND_STRL("pht\\AtomicInteger"), 1);
+    zend_string_hash_val(common_strings.AtomicInteger);
+    GC_FLAGS(common_strings.AtomicInteger) |= IS_STR_INTERNED;
+
     sapi_module_deactivate = sapi_module.deactivate;
     sapi_module.deactivate = NULL;
 
@@ -55,6 +81,23 @@ PHP_MINIT_FUNCTION(pht)
 
 PHP_MSHUTDOWN_FUNCTION(pht)
 {
+    GC_FLAGS(common_strings.__construct) &= ~IS_STR_INTERNED;
+    zend_string_free(common_strings.__construct);
+    GC_FLAGS(common_strings.run) &= ~IS_STR_INTERNED;
+    zend_string_free(common_strings.run);
+    GC_FLAGS(common_strings._THREAD) &= ~IS_STR_INTERNED;
+    zend_string_free(common_strings._THREAD);
+    GC_FLAGS(common_strings.value) &= ~IS_STR_INTERNED;
+    zend_string_free(common_strings.value);
+    GC_FLAGS(common_strings.Queue) &= ~IS_STR_INTERNED;
+    zend_string_free(common_strings.Queue);
+    GC_FLAGS(common_strings.HashTable) &= ~IS_STR_INTERNED;
+    zend_string_free(common_strings.HashTable);
+    GC_FLAGS(common_strings.Vector) &= ~IS_STR_INTERNED;
+    zend_string_free(common_strings.Vector);
+    GC_FLAGS(common_strings.AtomicInteger) &= ~IS_STR_INTERNED;
+    zend_string_free(common_strings.AtomicInteger);
+
     sapi_module.deactivate = sapi_module_deactivate;
 
     return SUCCESS;

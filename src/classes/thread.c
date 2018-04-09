@@ -166,7 +166,7 @@ void handle_class_task(class_task_t *class_task)
         fci.params = zargs;
         fci.no_separation = 1;
         // @todo doesn't have to be __construct (could be class name instead)
-        ZVAL_STRINGL(&fci.function_name, "__construct", sizeof("__construct") - 1);
+        ZVAL_INTERNED_STR(&fci.function_name, common_strings.__construct);
 
         for (int i = 0; i < class_task->ctor_argc; ++i) {
             pht_convert_entry_to_zval(zargs + i, class_task->ctor_args + i);
@@ -178,7 +178,6 @@ void handle_class_task(class_task_t *class_task)
             zval_dtor(zargs + i);
         }
 
-        zval_dtor(&fci.function_name);
         efree(zargs);
 
         // dtor retval too?
@@ -202,7 +201,7 @@ void handle_class_task(class_task_t *class_task)
     fci.param_count = 0;
     fci.params = NULL;
     fci.no_separation = 1;
-    ZVAL_STRINGL(&fci.function_name, "run", sizeof("run") - 1);
+    ZVAL_INTERNED_STR(&fci.function_name, common_strings.run);
 
     result = zend_call_function(&fci, NULL);
 
@@ -212,8 +211,6 @@ void handle_class_task(class_task_t *class_task)
             zend_error_noreturn(E_CORE_ERROR, "Couldn't execute method %s%s%s", ZSTR_VAL(ce_name), "::", "run");
         }
     }
-
-    zval_dtor(&fci.function_name);
 
 finish:
     zend_string_free(ce_name);
@@ -247,7 +244,7 @@ void handle_function_task(function_task_t *function_task)
 
 void handle_file_task(file_task_t *file_task)
 {
-    zval file_args, element, *file_args2 = zend_hash_str_find(&EG(symbol_table), "_THREAD", sizeof("_THREAD") - 1);
+    zval file_args, element, *file_args2 = zend_hash_find(&EG(symbol_table), common_strings._THREAD);
 
     if (file_args2) {
         zend_hash_clean(Z_ARR_P(file_args2));
@@ -261,7 +258,7 @@ void handle_file_task(file_task_t *file_task)
         zend_hash_next_index_insert_new(Z_ARR(file_args), &element);
     }
 
-    zend_hash_str_add(&EG(symbol_table), "_THREAD", sizeof("_THREAD") - 1, &file_args);
+    zend_hash_add(&EG(symbol_table), common_strings._THREAD, &file_args);
 
     zend_file_handle zfd;
 
