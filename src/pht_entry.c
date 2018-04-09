@@ -139,7 +139,7 @@ void pht_convert_entry_to_zval(zval *value, pht_entry_t *e)
                 name_len = spprintf(&name, 0, "Closure@%p", zend_get_closure_method_def(value));
 
                 if (!zend_hash_str_update_ptr(EG(function_table), name, name_len, closure)) {
-                    printf("FAILED!\n");
+                    zend_throw_exception(zend_ce_exception, "Failed to deserialise the closure", 0);
                 }
 
                 efree(name);
@@ -258,7 +258,7 @@ void pht_convert_entry_to_zval(zval *value, pht_entry_t *e)
                 PHP_VAR_UNSERIALIZE_INIT(var_hash);
 
                 if (!php_var_unserialize(value, &p, p + buf_len, &var_hash)) {
-                    // @todo handle serialisation failure - is this even possible to hit?
+                    zend_throw_exception(zend_ce_exception, "Failed to deserialise the object", 0);
                 }
 
                 PHP_VAR_UNSERIALIZE_DESTROY(var_hash);
