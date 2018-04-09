@@ -27,14 +27,6 @@ extern zend_module_entry pht_module_entry;
 
 #define PHP_PHT_VERSION "0.0.1"
 
-#ifdef PHP_WIN32
-#  define PHP_PHT_API __declspec(dllexport)
-#elif defined(__GNUC__) && __GNUC__ >= 4
-#  define PHP_PHT_API __attribute__ ((visibility("default")))
-#else
-#  define PHP_PHT_API
-#endif
-
 #ifndef ZTS
 #  error "ZTS is required"
 #endif
