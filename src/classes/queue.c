@@ -49,11 +49,16 @@ static zend_object *queue_ctor(zend_class_entry *entry)
 
     if (!PHT_ZG(skip_qoi_creation)) {
         queue_obj_internal_t *qoi = calloc(1, sizeof(queue_obj_internal_t));
+        pthread_mutexattr_t attr;
 
+        pthread_mutexattr_init(&attr);
+        pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_ERRORCHECK);
+        pthread_mutex_init(&qoi->lock, &attr);
+        pthread_mutexattr_destroy(&attr);
+
+        pht_queue_init(&qoi->queue, pht_entry_delete);
         qoi->refcount = 1;
         qoi->vn = 0;
-        pthread_mutex_init(&qoi->lock, NULL);
-        pht_queue_init(&qoi->queue, pht_entry_delete);
 
         qo->qoi = qoi;
     }
@@ -196,7 +201,9 @@ PHP_METHOD(Queue, lock)
         return;
     }
 
-    pthread_mutex_lock(&qo->qoi->lock);
+    if (pthread_mutex_lock(&qo->qoi->lock)) {
+        zend_throw_error(NULL, "This mutex lock is already being held by this thread");
+    }
 }
 
 ZEND_BEGIN_ARG_INFO_EX(Queue_unlock_arginfo, 0, 0, 0)
@@ -210,7 +217,9 @@ PHP_METHOD(Queue, unlock)
         return;
     }
 
-    pthread_mutex_unlock(&qo->qoi->lock);
+    if (pthread_mutex_unlock(&qo->qoi->lock)) {
+        zend_throw_error(NULL, "This mutex lock is either unheld, or is currently being held by another thread");
+    }
 }
 
 zend_function_entry Queue_methods[] = {

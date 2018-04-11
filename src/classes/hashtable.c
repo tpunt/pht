@@ -49,9 +49,14 @@ static zend_object *hash_table_ctor(zend_class_entry *entry)
 
     if (!PHT_ZG(skip_htoi_creation)) {
         hashtable_obj_internal_t *htoi = calloc(1, sizeof(hashtable_obj_internal_t));
+        pthread_mutexattr_t attr;
+
+        pthread_mutexattr_init(&attr);
+        pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_ERRORCHECK);
+        pthread_mutex_init(&htoi->lock, &attr);
+        pthread_mutexattr_destroy(&attr);
 
         pht_hashtable_init(&htoi->hashtable, 2, pht_entry_delete);
-        pthread_mutex_init(&htoi->lock, NULL);
         htoi->refcount = 1;
         htoi->vn = 0;
 
@@ -279,7 +284,9 @@ PHP_METHOD(HashTable, lock)
         return;
     }
 
-    pthread_mutex_lock(&hto->htoi->lock);
+    if (pthread_mutex_lock(&hto->htoi->lock)) {
+        zend_throw_error(NULL, "This mutex lock is already being held by this thread");
+    }
 }
 
 ZEND_BEGIN_ARG_INFO_EX(HashTable_unlock_arginfo, 0, 0, 0)
@@ -293,7 +300,9 @@ PHP_METHOD(HashTable, unlock)
         return;
     }
 
-    pthread_mutex_unlock(&hto->htoi->lock);
+    if (pthread_mutex_unlock(&hto->htoi->lock)) {
+        zend_throw_error(NULL, "This mutex lock is either unheld, or is currently being held by another thread");
+    }
 }
 
 ZEND_BEGIN_ARG_INFO_EX(HashTable_size_arginfo, 0, 0, 0)

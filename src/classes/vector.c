@@ -49,9 +49,15 @@ static zend_object *vector_ctor(zend_class_entry *entry)
 
     if (!PHT_ZG(skip_voi_creation)) {
         vector_obj_internal_t *voi = calloc(1, sizeof(vector_obj_internal_t));
+        pthread_mutexattr_t attr;
 
         // delay vector initialisation until constructor
-        pthread_mutex_init(&voi->lock, NULL);
+
+        pthread_mutexattr_init(&attr);
+        pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_ERRORCHECK);
+        pthread_mutex_init(&voi->lock, &attr);
+        pthread_mutexattr_destroy(&attr);
+
         voi->refcount = 1;
         voi->vn = 0;
 
@@ -546,7 +552,9 @@ PHP_METHOD(Vector, lock)
         return;
     }
 
-    pthread_mutex_lock(&vo->voi->lock);
+    if (pthread_mutex_lock(&vo->voi->lock)) {
+        zend_throw_error(NULL, "This mutex lock is already being held by this thread");
+    }
 }
 
 ZEND_BEGIN_ARG_INFO_EX(Vector_unlock_arginfo, 0, 0, 0)
@@ -560,7 +568,9 @@ PHP_METHOD(Vector, unlock)
         return;
     }
 
-    pthread_mutex_unlock(&vo->voi->lock);
+    if (pthread_mutex_unlock(&vo->voi->lock)) {
+        zend_throw_error(NULL, "This mutex lock is either unheld, or is currently being held by another thread");
+    }
 }
 
 ZEND_BEGIN_ARG_INFO_EX(Vector_size_arginfo, 0, 0, 0)
